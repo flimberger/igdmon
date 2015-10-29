@@ -51,7 +51,7 @@ Q_SIGNALS:
 
 private:
     Q_SLOT void deviceDescriptionReceived(QNetworkReply *reply);
-    Q_SLOT void deviceDetected(internal::DeviceBuilder *deviceBuilder);
+    Q_SLOT void onDeviceFinished();
     void parseDeviceDescription(const QByteArray &data);
 
     QNetworkAccessManager m_networkAccess;

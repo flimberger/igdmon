@@ -31,8 +31,7 @@ ServiceBuilder::ServiceBuilder(QObject *parent)
     m_id(),
     m_scpdURL(),
     m_controlURL(),
-    m_eventSubURL(),
-    m_done(false)
+    m_eventSubURL()
 {
     auto result = connect(&m_networkAccess, &QNetworkAccessManager::finished,
                           this,             &ServiceBuilder::serviceDescriptionReceived);
@@ -88,11 +87,6 @@ std::unique_ptr<Service> ServiceBuilder::create()
     return ptr;
 }
 
-bool ServiceBuilder::done() const
-{
-    return m_done;
-}
-
 void ServiceBuilder::serviceDescriptionReceived(QNetworkReply *reply)
 {
     if (reply->error() != QNetworkReply::NoError) {
@@ -101,6 +95,8 @@ void ServiceBuilder::serviceDescriptionReceived(QNetworkReply *reply)
         return;
     }
     parseServiceDescription(reply->readAll());
+
+    emit finished();
 }
 
 void ServiceBuilder::parseServiceDescription(const QByteArray &data)
@@ -121,7 +117,8 @@ void ServiceBuilder::parseServiceDescription(const QByteArray &data)
 
     if (reader.atEnd()) {
         qDebug() << "ServiceBuilder: empty description document";
-        goto fail;
+
+        return;
     }
     // start reading
     reader.readNext();
@@ -130,11 +127,13 @@ void ServiceBuilder::parseServiceDescription(const QByteArray &data)
     if (reader.namespaceUri() != DESCRIPTION_NAMESPACE_URI) {
         qDebug() << "ServiceBuilder: parse error: wrong root element namespace"
                  << reader.namespaceUri();
-        goto fail;
+
+        return;
     }
     if (reader.name() != ROOT_TAG) {
         qDebug() << "ServiceBuilder: parse error: wrong root element name" << reader.name();
-        goto fail;
+
+        return;
     }
     // parse the description
     for (reader.readNext(); !reader.atEnd(); reader.readNext()) {
@@ -187,16 +186,7 @@ void ServiceBuilder::parseServiceDescription(const QByteArray &data)
     }
     if (reader.hasError()) {
         qDebug() << "ServiceBuilder: parse error: " << reader.errorString();
-        goto fail;
     }
-    m_done = true;
-    emit serviceDetected(this);
-
-    return;
-
-fail:
-    m_done = true;
-    emit serviceDetectionFailed(this);
 }
 
 } // namespace internal

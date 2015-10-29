@@ -20,6 +20,7 @@ class ServiceBuilder;
 class DeviceBuilder : public QObject
 {
     Q_OBJECT
+
 public:
     explicit DeviceBuilder(QObject *parent=nullptr);
     ~DeviceBuilder();
@@ -45,14 +46,11 @@ public:
 
     std::unique_ptr<Device> create();
 
-    bool done() const;
-
 Q_SIGNALS:
     void finished();
 
 private:
-    Q_SLOT void serviceDetected(ServiceBuilder *sender);
-    Q_SLOT void onServiceDetectionFailed(ServiceBuilder *serviceBuilder);
+    Q_SLOT void onServiceDetected();
     Q_SLOT void onDeviceBuilderFinished();
     std::unique_ptr<ServiceBuilder> removeServiceBuilderFromPool(ServiceBuilder *serviceBuilder);
     void checkFinished();
@@ -60,7 +58,6 @@ private:
     std::vector<std::unique_ptr<ServiceBuilder>> m_serviceBuilders;
     std::vector<std::unique_ptr<DeviceBuilder>> m_subDeviceBuilders;
     std::unique_ptr<Device> m_instance;
-    bool m_done;
 
     Q_DISABLE_COPY(DeviceBuilder)
 };

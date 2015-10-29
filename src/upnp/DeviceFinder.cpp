@@ -5,6 +5,8 @@
 #include "upnp/Service.hpp"
 #include "upnp/ServiceBuilder.hpp"
 
+#include "util.hpp"
+
 #include <QtCore/QDebug>
 #include <QtCore/QXmlStreamReader>
 
@@ -97,37 +99,17 @@ void DeviceFinder::deviceDescriptionReceived(QNetworkReply *reply)
     parseDeviceDescription(reply->readAll());
 }
 
-void DeviceFinder::deviceDetected(internal::DeviceBuilder *deviceBuilder)
+void DeviceFinder::onDeviceFinished()
 {
-    using std::begin;
-    using std::end;
+    auto *sender = qobject_cast<DeviceBuilder *>(QObject::sender());
+    auto builder = removeSmartpointerFromVector(m_deviceBuilders, sender);
 
-    const auto b = begin(m_deviceBuilders);
-    const auto e = end(m_deviceBuilders);
-
-    // Find the builder which finished its detection
-    auto ptrref = std::find_if(b, e, [&](const std::unique_ptr<DeviceBuilder> &builder){
-        return builder.get() == deviceBuilder;
-    });
-
-    if (ptrref == e) {
-        qDebug() << "builder not in vector";
-
-        return;
-    }
-
-    // Swap the builder into a local variable and remove the empty smartpointer from the builder
-    // store
-    auto ptr = std::unique_ptr<DeviceBuilder>();
-
-    ptrref->swap(ptr);
-    std::remove_if(b, e, [](const std::unique_ptr<DeviceBuilder> &builder){
-        return bool(builder);
-    });
-
-    // Create a device from the device builder, the smartpointer takes care of the builder instance
-    m_devices.emplace_back(ptr->create());
-    emit deviceAdded(m_devices.back().get());
+    if (builder) {
+        // Create a device from the device builder, the smartpointer takes care of the builder instance
+        m_devices.emplace_back(builder->create());
+        emit deviceAdded(m_devices.back().get());
+    } else
+        qDebug() << "DeviceFinder::onDeviceFinished: device not in builder pool";
 
     // If no devices are under construction (typically waiting for their service descriptions), then
     // inform the clients the search is completed
@@ -223,6 +205,12 @@ void DeviceFinder::parseDeviceDescription(const QByteArray &data)
                     deviceStack.pop_back();
                     if (deviceStack.size() == 0) {
                         m_deviceBuilders.emplace_back(std::move(prototype));
+
+                        auto result = connect(m_deviceBuilders.back().get(),
+                                              &DeviceBuilder::finished,
+                                              this, &DeviceFinder::onDeviceFinished);
+                        Q_ASSERT(result);
+                        Q_UNUSED(result);
                         state = ParserState::TopLevelElement;
                     } else
                         deviceStack.back()->addChild(std::move(prototype));

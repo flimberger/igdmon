@@ -1,5 +1,7 @@
 #include "DeviceBuilder.hpp"
 
+#include "util.hpp"
+
 #include "Device.hpp"
 #include "Service.hpp"
 #include "ServiceBuilder.hpp"
@@ -12,8 +14,7 @@ namespace internal {
 
 DeviceBuilder::DeviceBuilder(QObject *parent)
   : QObject(parent),
-    m_instance(new Device()),
-    m_done(false)
+    m_instance(new Device())
 {}
 
 DeviceBuilder::~DeviceBuilder() = default;
@@ -34,12 +35,8 @@ DeviceBuilder &DeviceBuilder::addService(std::unique_ptr<ServiceBuilder> builder
 {
     m_serviceBuilders.emplace_back(std::move(builder));
 
-    auto result = connect(m_serviceBuilders.back().get(), &ServiceBuilder::serviceDetected,
-                          this,                           &DeviceBuilder::serviceDetected);
-    Q_ASSERT(result);
-    result = connect(m_serviceBuilders.back().get(), &ServiceBuilder::serviceDetectionFailed,
-                     this, &DeviceBuilder::onServiceDetectionFailed);
-    Q_ASSERT(result);
+    auto result = connect(m_serviceBuilders.back().get(), &ServiceBuilder::finished,
+                          this,                           &DeviceBuilder::onServiceDetected);
     Q_UNUSED(result);
     m_serviceBuilders.back()->startDetection();
 
@@ -145,88 +142,34 @@ std::unique_ptr<Device> DeviceBuilder::create()
     return ptr;
 }
 
-void DeviceBuilder::serviceDetected(ServiceBuilder *sender)
+void DeviceBuilder::onServiceDetected()
 {
-    auto serviceBuilder = removeServiceBuilderFromPool(sender);
+    auto *sender = qobject_cast<ServiceBuilder *>(QObject::sender());
+    auto serviceBuilder = removeSmartpointerFromVector(m_serviceBuilders, sender);
 
-    m_instance->m_services.push_back(serviceBuilder->create());
-    qDebug() << "DeviceBuilder::serviceDetected: service detected:" << m_instance->m_services.back()->id();
-
+    if (serviceBuilder)
+        m_instance->m_services.push_back(serviceBuilder->create());
+    else
+        qDebug() << "DeviceBuilder::onServiceDetected: service not in builder pool";
     checkFinished();
-}
-
-void DeviceBuilder::onServiceDetectionFailed(ServiceBuilder *serviceBuilder)
-{
-    auto builder = removeServiceBuilderFromPool(serviceBuilder);
-
-    Q_UNUSED(builder);
 }
 
 void DeviceBuilder::onDeviceBuilderFinished()
 {
-    using std::begin;
-    using std::end;
-
     auto *sender = qobject_cast<DeviceBuilder *>(QObject::sender());
-    auto ptr = std::unique_ptr<DeviceBuilder>();
-    const auto b = begin(m_subDeviceBuilders);
-    const auto e = end(m_subDeviceBuilders);
+    auto builder = removeSmartpointerFromVector(m_subDeviceBuilders, sender);
 
-    // Find device builder in pool
-    auto ptrit = std::find_if(b, e, [&](const std::unique_ptr<DeviceBuilder> &bptr){
-        return bptr.get() == sender;
-    });
-
-    if (ptrit == e) {
-        qDebug() << "DeviceBuilder::onDeviceBuilderFinished: failed to locate sender in pool";
-        goto end;
-    }
-
-    // Swap pointer from pool into local instance and remove the new nullptr from the pool
-    ptrit->swap(ptr);
-    std::remove_if(b, e, [](const std::unique_ptr<DeviceBuilder> &bptr){ return bool(bptr); });
-
-end:
+    if (builder)
+        m_instance->m_children.push_back(builder->create());
+    else
+        qDebug() << "DeviceBuilder::onDeviceBuilderFinished: device not in builder pool";
     checkFinished();
-}
-
-std::unique_ptr<ServiceBuilder>
-DeviceBuilder::removeServiceBuilderFromPool(ServiceBuilder *serviceBuilder)
-{
-    using std::begin;
-    using std::end;
-
-    auto ptr = std::unique_ptr<ServiceBuilder>();
-    const auto b = begin(m_serviceBuilders);
-    const auto e = end(m_serviceBuilders);
-
-    // Find service builder in the pool
-    auto ptrref = std::find_if(b, e, [&](const std::unique_ptr<ServiceBuilder> &builder){
-        return builder.get() == serviceBuilder;
-    });
-
-    if (ptrref == e) {
-        qDebug() << "DeviceBuilder: failed to find service builder";
-
-        return ptr;
-    }
-
-    // Swap service builder from pool into local instance
-    ptrref->swap(ptr);
-    std::remove_if(begin(m_serviceBuilders), end(m_serviceBuilders),
-                   [&](const std::unique_ptr<ServiceBuilder> &builder) {
-        return bool(builder);
-    });
-
-    return ptr;
 }
 
 void DeviceBuilder::checkFinished()
 {
-    if (!m_done && (m_subDeviceBuilders.size() == 0) && (m_serviceBuilders.size() == 0)) {
-        m_done = true;
+    if ((m_subDeviceBuilders.size() == 0) && (m_serviceBuilders.size() == 0))
         emit finished();
-    }
 }
 
 } // namespace internal

@@ -35,11 +35,8 @@ public:
     void startDetection();
     std::unique_ptr<Service> create();
 
-    bool done() const;
-
 Q_SIGNALS:
-    void serviceDetectionFailed(ServiceBuilder *serviceBuilder);
-    void serviceDetected(ServiceBuilder *serviceBuilder);
+    void finished();
 
 private:
     Q_SLOT void serviceDescriptionReceived(QNetworkReply *reply);
@@ -52,7 +49,6 @@ private:
     QUrl m_scpdURL;
     QUrl m_controlURL;
     QUrl m_eventSubURL;
-    bool m_done;
 
     Q_DISABLE_COPY(ServiceBuilder)
 };
