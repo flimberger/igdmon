@@ -3,13 +3,13 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QString>
-#include <QtCore/QUrl>
 
 #include <QtNetwork/QNetworkAccessManager>
 
 #include <memory>
 
 class QNetworkReply;
+class QUrl;
 
 namespace fritzmon {
 namespace upnp {
@@ -44,11 +44,6 @@ private:
 
     QNetworkAccessManager m_networkAccess;
     std::unique_ptr<Service> m_instance;
-    QString m_type;
-    QString m_id;
-    QUrl m_scpdURL;
-    QUrl m_controlURL;
-    QUrl m_eventSubURL;
 
     Q_DISABLE_COPY(ServiceBuilder)
 };

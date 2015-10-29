@@ -44,7 +44,7 @@ private:
     QVector<Action> m_actions;
     QString m_type;
     QString m_id;
-    QString m_scpdURL;
+    QUrl m_scpdURL;
     QUrl m_controlURL;
     QUrl m_eventSubURL;
 

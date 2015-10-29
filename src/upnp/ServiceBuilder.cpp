@@ -26,12 +26,7 @@ static constexpr auto RELATEDSTATEVARIABLE_TAG = "relatedStateVariable";
 ServiceBuilder::ServiceBuilder(QObject *parent)
   : QObject(parent),
     m_networkAccess(),
-    m_instance(new Service()),
-    m_type(),
-    m_id(),
-    m_scpdURL(),
-    m_controlURL(),
-    m_eventSubURL()
+    m_instance(new Service())
 {
     auto result = connect(&m_networkAccess, &QNetworkAccessManager::finished,
                           this,             &ServiceBuilder::serviceDescriptionReceived);
@@ -43,39 +38,39 @@ ServiceBuilder::~ServiceBuilder() = default;
 
 ServiceBuilder &ServiceBuilder::type(const QString &serviceType)
 {
-    m_type = serviceType;
+    m_instance->m_type = serviceType;
     return *this;
 }
 
 ServiceBuilder &ServiceBuilder::id(const QString &serviceId)
 {
-    m_id = serviceId;
+    m_instance->m_id = serviceId;
     return *this;
 }
 
 ServiceBuilder &ServiceBuilder::scpdURL(const QUrl &scpdURL)
 {
-    m_scpdURL = scpdURL;
+    m_instance->m_scpdURL = scpdURL;
     return *this;
 }
 
 ServiceBuilder &ServiceBuilder::controlURL(const QUrl &controlURL)
 {
-    m_controlURL = controlURL;
+    m_instance->m_controlURL = controlURL;
     return *this;
 }
 
 ServiceBuilder &ServiceBuilder::eventSubURL(const QUrl &eventURL)
 {
-    m_eventSubURL = eventURL;
+    m_instance->m_eventSubURL = eventURL;
     return *this;
 }
 
 void ServiceBuilder::startDetection()
 {
-    Q_ASSERT(!m_scpdURL.isEmpty());
+    Q_ASSERT(!m_instance->m_scpdURL.isEmpty());
 
-    m_networkAccess.get(QNetworkRequest(m_scpdURL));
+    m_networkAccess.get(QNetworkRequest(m_instance->m_scpdURL));
 }
 
 std::unique_ptr<Service> ServiceBuilder::create()
