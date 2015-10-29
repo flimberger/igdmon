@@ -38,7 +38,7 @@ public:
     Device *rootDevice() const;
     QString serialNumber() const;
     const std::vector<std::unique_ptr<Service>> &services() const;
-    QUrl type() const;
+    QString type() const;
     QString uniqueDeviceName() const;
     QString upc() const;
     QUrl iconURL() const;
@@ -60,7 +60,7 @@ private:
     QUrl m_presentationURL;
     Device *m_rootDevice;
     QString m_serialNumber;
-    QUrl m_type;
+    QString m_type;
     QString m_uniqueDeviceName;
     QString m_upc;
     QUrl m_iconURL;

@@ -102,7 +102,7 @@ const std::vector<std::unique_ptr<Service> > &Device::services() const
     return m_services;
 }
 
-QUrl Device::type() const
+QString Device::type() const
 {
     return m_type;
 }
