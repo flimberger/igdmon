@@ -6,6 +6,7 @@ set(CMAKE_AUTOMOC ON)
 
 set(fritzmon_SRCS
     fritzmon.cpp
+    soap/Request.cpp
     upnp/Action.cpp
     upnp/Device.cpp
     upnp/DeviceBuilder.cpp
