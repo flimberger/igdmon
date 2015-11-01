@@ -1,11 +1,17 @@
+#include "Graph.hpp"
+#include "GraphModel.hpp"
+
 #include "upnp/Device.hpp"
 #include "upnp/DeviceFinder.hpp"
 #include "upnp/Service.hpp"
 
 #include <QtCore/QDebug>
 #include <QtCore/QUrl>
+#include <QtCore/QVariant>
 
 #include <QtGui/QGuiApplication>
+
+#include <QtQml/QQmlContext>
 
 #include <QtQuick/QQuickView>
 
@@ -33,9 +39,16 @@ void dumpDevice(upnp::Device *device)
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+
+    qmlRegisterType<Graph>("Graph", 1, 0, "Graph");
+
+    auto *downstreamData = new GraphModel;
+    auto *upstreamData = new GraphModel;
     QQuickView view;
     auto *rootContext = view.rootContext();
 
+    rootContext->setContextProperty("downstreamData", QVariant::fromValue(downstreamData));
+    rootContext->setContextProperty("upstreamData", QVariant::fromValue(upstreamData));
     view.setSource(QUrl(APPUI_QML_PATH));
     view.setResizeMode(QQuickView::SizeRootObjectToView);
     view.show();

@@ -7,6 +7,8 @@ set(CMAKE_AUTOMOC ON)
 qt5_add_resources(fritzmon_RESOURCES ../assets/fritzmon.qrc)
 set(fritzmon_SRCS
     fritzmon.cpp
+    Graph.cpp
+    GraphModel.cpp
     soap/Request.cpp
     upnp/Action.cpp
     upnp/Device.cpp
