@@ -7,11 +7,11 @@
 
 #include <QtGui/QGuiApplication>
 
-#include <QtQml/QQmlApplicationEngine>
+#include <QtQuick/QQuickView>
 
 using namespace fritzmon;
 
-static constexpr auto APPUI_QML_PATH = "../assets/qml/appui.qml";
+static constexpr auto *APPUI_QML_PATH = "qrc:/fritzmon/qml/appui.qml";
 static constexpr auto DEVICE_DESCRIPTION_IURL = "http://fritz.box:49000/igddesc.xml";
 
 void dumpService(upnp::Service *service)
@@ -33,7 +33,13 @@ void dumpDevice(upnp::Device *device)
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
-    QQmlApplicationEngine uiEngine(APPUI_QML_PATH);
+    QQuickView view;
+    auto *rootContext = view.rootContext();
+
+    view.setSource(QUrl(APPUI_QML_PATH));
+    view.setResizeMode(QQuickView::SizeRootObjectToView);
+    view.show();
+
     upnp::DeviceFinder deviceFinder;
 
     auto result = QObject::connect(&deviceFinder, &upnp::DeviceFinder::deviceAdded, &dumpDevice);

@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/fritzmon">
+        <file>shaders/line.fsh</file>
+        <file>shaders/line.vsh</file>
+        <file>shaders/noisy.fsh</file>
+        <file>shaders/noisy.vsh</file>
+        <file>qml/appui.qml</file>
+    </qresource>
+</RCC>

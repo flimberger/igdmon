@@ -1,13 +1,17 @@
+import QtQuick 2.2
 import QtQuick.Controls 1.2
+import QtQuick.Layouts 1.0
 
-ApplicationWindow {
-    title: "Fritz Graph";
-    width: 640;
-    height: 480;
+Item {
+//    title: "Fritz Graph"
+    height: 480
+    width: 640
     visible: true;
 
-    Button {
-        text: "Options";
-        anchors.centerIn: parent;
+    ColumnLayout {
+        id: mainLayout
+
+        anchors.fill: parent
+        spacing: 0
     }
 }
