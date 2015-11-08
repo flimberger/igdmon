@@ -28,7 +28,7 @@ Argument::Direction Argument::direction() const
 
 Action::Action() = default;
 
-Action::Action(const QString &name, const QVector<Argument> &arguments)
+Action::Action(const QString &name, const std::vector<Argument> &arguments)
   : m_name(name),
     m_arguments(arguments)
 {}
@@ -38,7 +38,7 @@ QString Action::name() const
     return m_name;
 }
 
-const QVector<Argument> &Action::arguments() const
+const std::vector<Argument> &Action::arguments() const
 {
     return m_arguments;
 }

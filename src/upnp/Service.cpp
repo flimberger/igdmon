@@ -54,7 +54,7 @@ QString Service::serviceTypeIdentifier() const
     return m_type;
 }
 
-const QVector<Action> &Service::actions() const
+const std::vector<Action> &Service::actions() const
 {
     return m_actions;
 }

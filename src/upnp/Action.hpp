@@ -2,7 +2,8 @@
 #define UPNP_ACTION_HPP
 
 #include <QtCore/QString>
-#include <QtCore/QVector>
+
+#include <vector>
 
 namespace fritzmon {
 namespace upnp {
@@ -32,14 +33,14 @@ class Action
 {
 public:
     Action();
-    explicit Action(const QString &name, const QVector<Argument> &arguments);
+    explicit Action(const QString &name, const std::vector<Argument> &arguments);
 
     QString name() const;
-    const QVector<Argument> &arguments() const;
+    const std::vector<Argument> &arguments() const;
 
 private:
     QString m_name;
-    QVector<Argument> m_arguments;
+    std::vector<Argument> m_arguments;
 };
 
 } // namespace upnp

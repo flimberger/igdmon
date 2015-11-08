@@ -6,9 +6,9 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QUrl>
-#include <QtCore/QVector>
 
 #include <memory>
+#include <vector>
 
 class QVariant;
 
@@ -44,7 +44,7 @@ public:
     int lastTransportStatus() const;
     QString serviceTypeIdentifier() const;
 
-    const QVector<Action> &actions() const;
+    const std::vector<Action> &actions() const;
 
 Q_SIGNALS:
     void serviceInstanceDied();
@@ -53,7 +53,7 @@ Q_SIGNALS:
 private:
     Q_SLOT void onRequestCompleted(std::shared_ptr<QByteArray> rawText);
 
-    QVector<Action> m_actions;
+    std::vector<Action> m_actions;
     QString m_type;
     QString m_id;
     QUrl m_scpdURL;

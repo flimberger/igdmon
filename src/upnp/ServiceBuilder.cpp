@@ -105,7 +105,7 @@ void ServiceBuilder::parseServiceDescription(const QByteArray &data)
 
     // TODO: yeah...
     QString actionName;
-    QVector<Argument> actionArguments;
+    std::vector<Argument> actionArguments;
     QString argumentName;
     QString argumentStateVariable;
     Argument::Direction argumentDirection;
@@ -151,7 +151,7 @@ void ServiceBuilder::parseServiceDescription(const QByteArray &data)
                     state = ParserState::Argument;
             } else if (tokenType == QXmlStreamReader::EndElement)
                 if (tagName == ACTION_TAG) {
-                    m_instance->m_actions.push_back(Action(actionName, actionArguments));
+                    m_instance->m_actions.emplace_back(actionName, actionArguments);
                     actionName.clear();
                     actionArguments.clear();
                     state = ParserState::TopLevelElement;
@@ -171,8 +171,8 @@ void ServiceBuilder::parseServiceDescription(const QByteArray &data)
                         argumentDirection = Argument::Direction::Out;
                 }
             } else if ((tokenType == QXmlStreamReader::EndElement) && (tagName == ARGUMENT_TAG)) {
-                actionArguments.push_back(Argument(argumentName, argumentStateVariable,
-                                                   argumentDirection));
+                actionArguments.emplace_back(argumentName, argumentStateVariable,
+                                             argumentDirection);
                 argumentName.clear();
                 argumentStateVariable.clear();
                 state = ParserState::Action;
