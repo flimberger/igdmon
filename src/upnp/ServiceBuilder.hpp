@@ -1,6 +1,7 @@
 #ifndef UPNP_INTERNAL_SERVICEBUILDER_HPP
 #define UPNP_INTERNAL_SERVICEBUILDER_HPP
 
+#include <QtCore/QList>
 #include <QtCore/QObject>
 #include <QtCore/QString>
 
@@ -39,6 +40,7 @@ Q_SIGNALS:
     void finished();
 
 private:
+    Q_SLOT void onSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
     Q_SLOT void serviceDescriptionReceived(QNetworkReply *reply);
     void parseServiceDescription(const QByteArray &data);
 

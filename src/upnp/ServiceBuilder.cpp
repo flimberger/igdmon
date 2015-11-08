@@ -28,10 +28,10 @@ ServiceBuilder::ServiceBuilder(QObject *parent)
     m_networkAccess(),
     m_instance(new Service())
 {
-    auto result = connect(&m_networkAccess, &QNetworkAccessManager::finished,
-                          this,             &ServiceBuilder::serviceDescriptionReceived);
-    Q_ASSERT(result);
-    Q_UNUSED(result);
+    connect(&m_networkAccess, &QNetworkAccessManager::finished,
+            this,             &ServiceBuilder::serviceDescriptionReceived);
+    connect(&m_networkAccess, &QNetworkAccessManager::sslErrors,
+            this,             &ServiceBuilder::onSslErrors);
 }
 
 ServiceBuilder::~ServiceBuilder() = default;
@@ -82,14 +82,20 @@ std::unique_ptr<Service> ServiceBuilder::create()
     return ptr;
 }
 
+void ServiceBuilder::onSslErrors(QNetworkReply *reply, const QList<QSslError> &errors)
+{
+    if ((errors.size() == 1) && (errors[0].error() == QSslError::SelfSignedCertificate)){
+        qDebug() << "ServiceBuilder::onSslError: self signed certificate (ignored)";
+        reply->ignoreSslErrors();
+    }
+}
+
 void ServiceBuilder::serviceDescriptionReceived(QNetworkReply *reply)
 {
-    if (reply->error() != QNetworkReply::NoError) {
+    if (reply->error() != QNetworkReply::NoError)
         qDebug() << "ServiceBuilder: network error:" << reply->errorString();
-
-        return;
-    }
-    parseServiceDescription(reply->readAll());
+    else
+        parseServiceDescription(reply->readAll());
 
     emit finished();
 }

@@ -18,7 +18,8 @@
 using namespace fritzmon;
 
 static constexpr auto *APPUI_QML_PATH = "qrc:/fritzmon/qml/appui.qml";
-static constexpr auto DEVICE_DESCRIPTION_IURL = "http://fritz.box:49000/igddesc.xml";
+// static constexpr auto *DEVICE_DESCRIPTION_URL = "http://fritz.box:49000/igddesc.xml";
+static constexpr auto *DEVICE_DESCRIPTION_URL = "https://fritz.box:49443/igddesc.xml";
 
 void dumpService(upnp::Service *service)
 {
@@ -59,7 +60,7 @@ int main(int argc, char *argv[])
     Q_ASSERT(result);
     Q_UNUSED(result);
 
-    deviceFinder.findDevice(QUrl(DEVICE_DESCRIPTION_IURL));
+    deviceFinder.findDevice(QUrl(DEVICE_DESCRIPTION_URL));
 
     return app.exec();
 }

@@ -52,6 +52,7 @@ Q_SIGNALS:
 private:
     Q_SLOT void deviceDescriptionReceived(QNetworkReply *reply);
     Q_SLOT void onDeviceFinished();
+    Q_SLOT void onSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
     void parseDeviceDescription(const QByteArray &data);
 
     QNetworkAccessManager m_networkAccess;

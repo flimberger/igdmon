@@ -12,6 +12,7 @@
 
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
+#include <QtNetwork/QSslError>
 
 #include <algorithm>
 #include <memory>
@@ -50,9 +51,10 @@ DeviceFinder::DeviceFinder(QObject *parent)
     m_baseURL(),
     m_searching(false)
 {
-    bool result = connect(&m_networkAccess, &QNetworkAccessManager::finished,
-                          this,             &DeviceFinder::deviceDescriptionReceived);
-    Q_ASSERT(result);
+    connect(&m_networkAccess, &QNetworkAccessManager::finished,
+            this,             &DeviceFinder::deviceDescriptionReceived);
+    connect(&m_networkAccess, &QNetworkAccessManager::sslErrors,
+            this,             &DeviceFinder::onSslErrors);
 }
 
 DeviceFinder::~DeviceFinder() = default;
@@ -91,7 +93,8 @@ bool DeviceFinder::searching() const
 void DeviceFinder::deviceDescriptionReceived(QNetworkReply *reply)
 {
     if (reply->error() != QNetworkReply::NoError) {
-        qDebug() << "DeviceFinder: network error:" << reply->errorString();
+        qDebug() << "DeviceFinder::deviceDescriptionReceived: network error:"
+                 << reply->errorString();
 
         return;
     }
@@ -116,6 +119,17 @@ void DeviceFinder::onDeviceFinished()
     if (m_deviceBuilders.empty()) {
         m_searching = false;
         emit searchComplete();
+    }
+}
+
+void DeviceFinder::onSslErrors(QNetworkReply *reply, const QList<QSslError> &errors)
+{
+    for (const auto &error : errors)
+        qDebug() << "DeviceFinder::onSslErrors:" << error.errorString();
+
+    if ((errors.size() == 1) && (errors[0].error() == QSslError::SelfSignedCertificate)) {
+        qDebug() << "DeviceFinder::onSslErrors: self signed certificate (ignored)";
+        reply->ignoreSslErrors();
     }
 }
 
