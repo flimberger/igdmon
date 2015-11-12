@@ -6,11 +6,10 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QUrl>
+#include <QtCore/QVariantMap>
 
 #include <memory>
 #include <vector>
-
-class QVariant;
 
 namespace fritzmon {
 
@@ -38,8 +37,7 @@ public:
     explicit Service(QObject *parent=nullptr);
     ~Service();
 
-    void invokeAction(const QString &name, const QVariant *inputArguments,
-                      QVariant *outputArguments, QVariant *returnValue);
+    void invokeAction(const QString &name, const QVariantMap &inputArguments);
     void queryStateVariable(const QString &name, QVariant &value);
 
     QString id() const;
@@ -49,10 +47,14 @@ public:
     const std::vector<StateVariable> &stateVariables() const;
 
 Q_SIGNALS:
+    void actionInvoked(const QVariantMap &outputArguments, const QVariant &returnValue);
     void serviceInstanceDied();
     void stateVariableChanged(const QString &name, const QVariant &value);
 
 private:
+    /* Q_SLOT */ void onActionFinished(const QVariantMap &outputArguments,
+                                       const QVariant &returnValue);
+
     std::vector<Action> m_actions;
     std::vector<StateVariable> m_stateVariables;
     QString m_type;

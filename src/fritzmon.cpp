@@ -24,6 +24,7 @@ using namespace fritzmon;
 static constexpr auto *APPUI_QML_PATH = "qrc:/fritzmon/qml/appui.qml";
 // static constexpr auto *DEVICE_DESCRIPTION_URL = "http://fritz.box:49000/igddesc.xml";
 static constexpr auto *DEVICE_DESCRIPTION_URL = "https://fritz.box:49443/igddesc.xml";
+static constexpr auto *GET_ADDON_INFOS_ACTION_NAME = "GetAddonInfos";
 
 void dumpService(upnp::Service *service)
 {
@@ -43,6 +44,13 @@ void dumpDevice(upnp::Device *device)
         dumpDevice(subDevice.get());
 }
 
+void printResponse(const QVariantMap &outputArguments, const QVariant &returnValue)
+{
+    qDebug() << "::printResponse: return value:" << returnValue;
+    for (const auto &value : outputArguments)
+        qDebug() << "::printResponse:" << value;
+}
+
 void queryDevice(upnp::Device *device)
 {
     if (device->type() == "urn:schemas-upnp-org:device:WANDevice:1") {
@@ -51,10 +59,8 @@ void queryDevice(upnp::Device *device)
                     == "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1") {
                 qDebug() << "queryDevice: query" << service->id();
 
-                auto dummy = QVariant();
-
-                service->queryStateVariable("ByteReceiveRate", dummy);
-                service->queryStateVariable("ByteSendRate", dummy);
+                QObject::connect(service.get(), &upnp::Service::actionInvoked, &printResponse);
+                service->invokeAction(GET_ADDON_INFOS_ACTION_NAME, QVariantMap());
             }
     } else
         for (const auto &subdevice : device->children())
