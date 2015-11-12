@@ -92,9 +92,24 @@ void MonitorApp::onUpdateTimeout()
 {
     static auto noArg = QVariantMap();
 
-    if (m_wanCommonConfigService->invokeAction(GET_ADDON_INFOS_ACTION_NAME, noArg)
-            != upnp::Service::InvokeActionResult::Success)
-        qDebug() << "MonitorApp::onDeviceAdded: invocation failed";
+    auto result = m_wanCommonConfigService->invokeAction(GET_ADDON_INFOS_ACTION_NAME, noArg);
+
+    if (result != upnp::Service::InvokeActionResult::Success)
+        auto resultString = QString();
+
+        switch (result) {
+        case upnp::Service::InvokeActionResult::Success:
+            break;
+        case upnp::Service::InvokeActionResult::InvalidAction:
+            qDebug() << "MonitorApp::onDeviceAdded: invalid action";
+            break;
+        case upnp::Service::InvokeActionResult::InvocationFailed:
+            qDebug() << "MonitorApp::onDeviceAdded: invocation failed";
+            break;
+        case upnp::Service::InvokeActionResult::PendingAction:
+            qDebug() << "MonitorApp::onDeviceAdded: action pending";
+            break;
+        }
 }
 
 } // namespace fritzmon
