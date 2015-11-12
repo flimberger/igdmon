@@ -101,10 +101,16 @@ Service::~Service() = default;
 
 void Service::invokeAction(const QString &name, const QVariantMap &inputArguments)
 {
-    Q_UNUSED(inputArguments);
-
+    const auto end = std::cend(inputArguments);
     auto soapAction = m_type + "#" + name;
-    auto soapBody = QString("<u:%1 xmlns:u=\"%2\"></u:%1>").arg(name).arg(m_type);
+    auto soapBody = QByteArray();
+    QXmlStreamWriter stream(&soapBody);
+
+    stream.writeStartElement(m_type, name);
+    if (!inputArguments.empty())
+        for (auto i = std::cbegin(inputArguments); i != end; ++i)
+            stream.writeTextElement(QString(), i.key(), i.value().toString());
+    stream.writeEndElement();
 
     m_request->start(m_controlURL, soapAction, soapBody);
 }
