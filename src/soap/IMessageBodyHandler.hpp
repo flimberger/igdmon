@@ -17,7 +17,9 @@ public:
     QString namespaceURI() const;
 
     virtual bool startElement(const QString &tag, QXmlStreamReader &stream) = 0;
+    virtual bool startMessage() = 0; //< This should reset the handlers internal state
     virtual bool endElement(const QString &tag) = 0;
+    virtual bool endMessage() = 0; //< This should finalize the handler, e.g. notify observers
 
 private:
     QString m_namespaceURI;

@@ -26,7 +26,9 @@ public:
                                 const std::function<void(const QVariantMap&, const QVariant &)> &finishedCallback);
 
     bool startElement(const QString &tag, QXmlStreamReader &stream) override;
+    bool startMessage() override;
     bool endElement(const QString &tag) override;
+    bool endMessage() override;
 
 private:
     static constexpr auto *GET_ADDON_INFOS_RESPONSE_TAG = "GetAddonInfosResponse";
@@ -51,13 +53,15 @@ private:
         Envelope,
     } m_state;
     QVariantMap m_outputArguments;
+
+    // used to suppress more than one finalizations, if the handler is installed multiple times
+    bool m_finalized;
 };
 
 GetAddonInfoResponseHandler::GetAddonInfoResponseHandler(const QString &namespaceURI,
                                                          const std::function<void(const QVariantMap&, const QVariant &)> &finishedCallback)
   : soap::IMessageBodyHandler(namespaceURI),
-    m_finishedCallback(finishedCallback),
-    m_state(ParserState::Root)
+    m_finishedCallback(finishedCallback)
 {}
 
 bool GetAddonInfoResponseHandler::startElement(const QString &tag, QXmlStreamReader &stream)
@@ -70,11 +74,29 @@ bool GetAddonInfoResponseHandler::startElement(const QString &tag, QXmlStreamRea
     return true;
 }
 
+bool GetAddonInfoResponseHandler::startMessage()
+{
+    m_finalized = false;
+    m_state = ParserState::Root;
+    m_outputArguments.clear();
+
+    return true;
+}
+
 bool GetAddonInfoResponseHandler::endElement(const QString &tag)
 {
     if ((m_state == ParserState::Envelope) && (tag == GET_ADDON_INFOS_RESPONSE_TAG))
-        m_finishedCallback(m_outputArguments, QVariant());
+        m_state = ParserState::Root;
 
+    return true;
+}
+
+bool GetAddonInfoResponseHandler::endMessage()
+{
+    if (!m_finalized) {
+        m_finishedCallback(m_outputArguments, QVariant());
+        m_finalized = true;
+    }
     return true;
 }
 

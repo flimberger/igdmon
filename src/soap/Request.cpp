@@ -100,6 +100,10 @@ void Request::parseReply(const QByteArray &data)
 
         return;
     }
+    for (const auto &handler : m_messageBodyHandlers)
+        std::get<1>(handler)->startMessage();
+        // TODO: how to react on errors? For now, they are simply ignored
+
     // start reading
     stream.readNext();
     // read root element and "verify" schema
@@ -150,6 +154,8 @@ void Request::parseReply(const QByteArray &data)
     }
     if (stream.hasError())
         qDebug() << "Request::parseReply: parse error:" << stream.errorString();
+    for (const auto &handler : m_messageBodyHandlers)
+        std::get<1>(handler)->endMessage();
 }
 
 } // namespace soap
