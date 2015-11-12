@@ -43,7 +43,6 @@ public:
     void queryStateVariable(const QString &name, QVariant &value);
 
     QString id() const;
-    int lastTransportStatus() const;
     QString serviceTypeIdentifier() const;
 
     const std::vector<Action> &actions() const;

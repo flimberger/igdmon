@@ -157,11 +157,6 @@ QString Service::id() const
     return m_id;
 }
 
-int Service::lastTransportStatus() const
-{
-    return 404;
-}
-
 QString Service::serviceTypeIdentifier() const
 {
     return m_type;
