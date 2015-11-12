@@ -4,6 +4,7 @@
 #include "upnp/Device.hpp"
 #include "upnp/DeviceFinder.hpp"
 #include "upnp/Service.hpp"
+#include "upnp/StateVariable.hpp"
 
 #include <QtCore/QDebug>
 #include <QtCore/QUrl>
@@ -20,21 +21,44 @@ using namespace fritzmon;
 static constexpr auto *APPUI_QML_PATH = "qrc:/fritzmon/qml/appui.qml";
 // static constexpr auto *DEVICE_DESCRIPTION_URL = "http://fritz.box:49000/igddesc.xml";
 static constexpr auto *DEVICE_DESCRIPTION_URL = "https://fritz.box:49443/igddesc.xml";
+static constexpr auto *GET_RECV_BYTES_ACTION_NAME = "GetTotalBytesReceived";
+static constexpr auto *GET_SENT_BYTES_ACTION_NAME = "GetTotalBytesSent";
 
 void dumpService(upnp::Service *service)
 {
-    qDebug() << service->id();
+    qDebug() << "\t" << service->id() << service->serviceTypeIdentifier();
     for (const auto &action : service->actions())
-        qDebug() << "\t" << action.name();
+        qDebug() << "\t\taction:" << action.name();
+    for (const auto &variable : service->stateVariables())
+        qDebug() << "\t\tstate variable:" << variable.name();
 }
 
 void dumpDevice(upnp::Device *device)
 {
-    qDebug() << device->friendlyName();
+    qDebug() << device->friendlyName() << device->type();
     for (const auto &service : device->services())
         dumpService(service.get());
     for (const auto &subDevice : device->children())
         dumpDevice(subDevice.get());
+}
+
+void queryDevice(upnp::Device *device)
+{
+    if (device->type() == "urn:schemas-upnp-org:device:WANDevice:1") {
+        for (const auto &service : device->services())
+            if (service->serviceTypeIdentifier()
+                    == "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1") {
+                qDebug() << "queryDevice: query" << service->id();
+                // service->invokeAction(GET_RECV_BYTES_ACTION_NAME, nullptr, nullptr, nullptr);
+                // service->invokeAction(GET_SENT_BYTES_ACTION_NAME, nullptr, nullptr, nullptr);
+                auto dummy = QVariant();
+
+                service->queryStateVariable("ByteReceiveRate", dummy);
+//                service->queryStateVariable("ByteSendRate", dummy);
+            }
+    } else
+        for (const auto &subdevice : device->children())
+            queryDevice(subdevice.get());
 }
 
 int main(int argc, char *argv[])
@@ -56,9 +80,8 @@ int main(int argc, char *argv[])
 
     upnp::DeviceFinder deviceFinder;
 
-    auto result = QObject::connect(&deviceFinder, &upnp::DeviceFinder::deviceAdded, &dumpDevice);
-    Q_ASSERT(result);
-    Q_UNUSED(result);
+    QObject::connect(&deviceFinder, &upnp::DeviceFinder::deviceAdded, &dumpDevice);
+    QObject::connect(&deviceFinder, &upnp::DeviceFinder::deviceAdded, &queryDevice);
 
     deviceFinder.findDevice(QUrl(DEVICE_DESCRIPTION_URL));
 

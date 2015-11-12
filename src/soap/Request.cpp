@@ -1,12 +1,22 @@
 #include "Request.hpp"
+#include "IMessageBodyHandler.hpp"
 
 #include <QtCore/QDebug>
+#include <QtCore/QXmlStreamReader>
 
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
 
+#include <tuple>
+
 namespace fritzmon {
 namespace soap {
+
+// static constexpr auto *SOAP_NAMESPACE_URI = "http://www.w3.org/2003/05/soap-envelope";
+static constexpr auto *SOAP_NAMESPACE_URI = "http://schemas.xmlsoap.org/soap/envelope/";
+static constexpr auto *SOAP_ROOT = "Envelope";
+static constexpr auto *SOAP_HEADER = "Header";
+static constexpr auto *SOAP_BODY = "Body";
 
 static constexpr auto *SOAPACTION_HEADER = "SOAPACTION";
 static constexpr auto *CONTENT_TYPE = "text/xml; charset=\"utf-8\"";
@@ -20,11 +30,26 @@ Request::Request(QObject *parent)
     connect(&m_networkAccess, &QNetworkAccessManager::finished, this, &Request::onRequestCompleted);
 }
 
+Request::~Request() = default;
+
+void Request::addMessageHandler(const QString &namespaceURI,
+                                const std::shared_ptr<IMessageBodyHandler> &handler)
+{
+    m_messageBodyHandlers.emplace_back(namespaceURI, handler);
+}
+
 void Request::start(const QUrl &url, const QString &action, const QString &bodyText)
 {
     auto requestText = QString(ENVELOPE_BEGIN).append(bodyText).append(ENVELOPE_END).toUtf8();
     auto request = QNetworkRequest(url);
 
+    qDebug() << "Request::start: >>>>>>>>";
+    qDebug() << "Request::start: " << requestText;
+    qDebug() << "Request::start: >>>>>>>>";
+
+    request.setRawHeader(QString("WWW-Authenticate").toUtf8(),
+                         QString("rmon:8ElAAMg/3OEOLlHB8NMLwnSpuPBiMJvi3eRXoANCFTY=====")
+                            .toUtf8().toBase64());
     request.setHeader(QNetworkRequest::ContentTypeHeader, CONTENT_TYPE);
     request.setRawHeader(SOAPACTION_HEADER, action.toUtf8());
     m_networkAccess.post(request, requestText);
@@ -32,9 +57,81 @@ void Request::start(const QUrl &url, const QString &action, const QString &bodyT
 
 void Request::onRequestCompleted(QNetworkReply *reply)
 {
-    auto rawText = std::make_shared<QByteArray>(reply->readAll());
+    if (reply->error() != QNetworkReply::NoError)
+        qDebug() << "Request::onRequestCompleted:" << reply->errorString();
+    else
+        parseReply(reply->readAll());
 
-    emit finished(rawText);
+    emit finished();
+}
+
+void Request::parseReply(const QByteArray &data)
+{
+    QXmlStreamReader stream(data);
+    enum class ParserState {
+        Start,
+        Header,
+        Body
+    } state = ParserState::Start;
+
+    qDebug() << "Request::parseReply: <<<<<<<<";
+    qDebug() << "Request::parseReply:" << data;
+    qDebug() << "Request::parseReply: <<<<<<<<";
+    if (stream.atEnd()) {
+        qDebug() << "Request::parseReply: empty description document";
+
+        return;
+    }
+    // start reading
+    stream.readNext();
+    // read root element and "verify" schema
+    stream.readNext();
+    if ((stream.namespaceUri() != SOAP_NAMESPACE_URI) || (stream.name() != SOAP_ROOT)) {
+        qDebug() << "Request::parseReply: parse error: no SOAP envelope";
+        qDebug() << "Request::parseReply: expected" << SOAP_NAMESPACE_URI << ":"
+                 << SOAP_ROOT;
+        qDebug() << "Request::parseReply: received" << stream.namespaceUri() << ":"
+                 << stream.name();
+
+        return;
+    }
+    for (stream.readNext(); !stream.atEnd(); stream.readNext()) {
+        auto token = stream.tokenType();
+        auto tag = stream.name();
+
+        switch (state) {
+        case ParserState::Start:
+            if (token == QXmlStreamReader::StartElement) {
+                if (tag == SOAP_HEADER)
+                    state = ParserState::Header;
+                else if (tag == SOAP_BODY)
+                    state = ParserState::Body;
+            }
+            break;
+        case ParserState::Header:
+            // ignore the header for now
+            if ((token == QXmlStreamReader::EndElement) && (tag == SOAP_HEADER))
+                state = ParserState::Start;
+            break;
+        case ParserState::Body:
+            auto namespaceURI = stream.namespaceUri();
+
+            if ((token == QXmlStreamReader::EndElement) && (tag == SOAP_BODY))
+                state = ParserState::Start;
+            else if ((token == QXmlStreamReader::EndElement)
+                     || (token == QXmlStreamReader::StartElement))
+                for (auto &handlerPair : m_messageBodyHandlers)
+                    if (std::get<0>(handlerPair) == namespaceURI) {
+                        if (token == QXmlStreamReader::StartElement)
+                            std::get<1>(handlerPair)->startElementHandler(tag.toString(), stream);
+                        else
+                            std::get<1>(handlerPair)->endElementHandler(tag.toString());
+                    }
+            break;
+        }
+    }
+    if (stream.hasError())
+        qDebug() << "Request::parseReply: parse error:" << stream.errorString();
 }
 
 } // namespace soap

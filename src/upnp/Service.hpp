@@ -22,6 +22,8 @@ class Request;
 
 namespace upnp {
 
+class StateVariable;
+
 namespace internal {
 
 class ServiceBuilder;
@@ -45,15 +47,15 @@ public:
     QString serviceTypeIdentifier() const;
 
     const std::vector<Action> &actions() const;
+    const std::vector<StateVariable> &stateVariables() const;
 
 Q_SIGNALS:
     void serviceInstanceDied();
     void stateVariableChanged(const QString &name, const QVariant &value);
 
 private:
-    Q_SLOT void onRequestCompleted(std::shared_ptr<QByteArray> rawText);
-
     std::vector<Action> m_actions;
+    std::vector<StateVariable> m_stateVariables;
     QString m_type;
     QString m_id;
     QUrl m_scpdURL;

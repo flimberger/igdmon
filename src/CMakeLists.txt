@@ -9,6 +9,7 @@ set(fritzmon_SRCS
     fritzmon.cpp
     Graph.cpp
     GraphModel.cpp
+    soap/IMessageBodyHandler.cpp
     soap/Request.cpp
     upnp/Action.cpp
     upnp/Device.cpp
@@ -16,6 +17,7 @@ set(fritzmon_SRCS
     upnp/DeviceFinder.cpp
     upnp/Service.cpp
     upnp/ServiceBuilder.cpp
+    upnp/StateVariable.cpp
     ${fritzmon_RESOURCES}
 )
 

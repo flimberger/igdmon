@@ -6,11 +6,15 @@
 #include <QtNetwork/QNetworkAccessManager>
 
 #include <memory>
+#include <utility>
+#include <vector>
 
 class QNetworkReply;
 
 namespace fritzmon {
 namespace soap {
+
+class IMessageBodyHandler;
 
 class Request : public QObject
 {
@@ -18,16 +22,21 @@ class Request : public QObject
 
 public:
     explicit Request(QObject *parent=nullptr);
+    ~Request();
 
+    void addMessageHandler(const QString &namespaceURI,
+                           const std::shared_ptr<IMessageBodyHandler> &handler);
     void start(const QUrl &url, const QString &action, const QString &bodyText);
 
 Q_SIGNALS:
-    void finished(std::shared_ptr<QByteArray> rawText);
+    void finished();
 
 private:
     Q_SLOT void onRequestCompleted(QNetworkReply *reply);
+    void parseReply(const QByteArray &data);
 
     QNetworkAccessManager m_networkAccess;
+    std::vector<std::pair<QString, std::shared_ptr<IMessageBodyHandler>>> m_messageBodyHandlers;
 
     Q_DISABLE_COPY(Request)
 };

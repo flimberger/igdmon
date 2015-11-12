@@ -2,6 +2,7 @@
 
 #include "upnp/Action.hpp"
 #include "upnp/Service.hpp"
+#include "upnp/StateVariable.hpp"
 
 #include <QtCore/QDebug>
 #include <QtCore/QXmlStreamReader>
@@ -22,6 +23,38 @@ static constexpr auto DIRECTION_TAG = "direction";
 static constexpr auto DIRECTION_IN = "in";
 static constexpr auto DIRECTION_OUT = "out";
 static constexpr auto RELATEDSTATEVARIABLE_TAG = "relatedStateVariable";
+static constexpr auto *STATE_VARIABLE = "stateVariable";
+static constexpr auto *DATA_TYPE = "dataType";
+static constexpr auto *VALUE_UINT1 = "ui1";
+static constexpr auto *VALUE_UINT2 = "ui2";
+static constexpr auto *VALUE_UINT4 = "ui4";
+static constexpr auto *VALUE_INT1 = "i1";
+static constexpr auto *VALUE_INT2 = "i2";
+static constexpr auto *VALUE_INT4 = "i4";
+static constexpr auto *VALUE_INT = "int";
+static constexpr auto *VALUE_REAL4 = "r4";
+static constexpr auto *VALUE_REAL8 = "r8";
+static constexpr auto *VALUE_NUMBER = "number";
+static constexpr auto *VALUE_FIXED_14_4 = "fixed.14.4";
+static constexpr auto *VALUE_FLOAT = "float";
+static constexpr auto *VALUE_CHAR = "char";
+static constexpr auto *VALUE_STRING = "string";
+static constexpr auto *VALUE_DATE = "date";
+static constexpr auto *VALUE_DATETIME = "datetime";
+static constexpr auto *VALUE_DATETIME_TZ = "datetime.tz";
+static constexpr auto *VALUE_TIME = "time";
+static constexpr auto *VALUE_TIME_TZ = "time.tz";
+static constexpr auto *VALUE_BOOLEAN = "boolean";
+static constexpr auto *VALUE_BIN_BASE64 = "bin.base64";
+static constexpr auto *VALUE_BIN_HEX = "bin.hex";
+static constexpr auto *VALUE_URI = "uri";
+static constexpr auto *VALUE_UUID = "uuid";
+static constexpr auto *ALLOWED_VALUE = "allowedValue";
+static constexpr auto *DEFAULT_VALUE = "defaultValue";
+static constexpr auto *ALLOWED_VALUE_RANGE = "allowedValueRange";
+static constexpr auto *VALUE_MINIMUM = "minimum";
+static constexpr auto *VALUE_MAXIMUM = "maximum";
+static constexpr auto *VALUE_STEP = "step";
 
 ServiceBuilder::ServiceBuilder(QObject *parent)
   : QObject(parent),
@@ -105,7 +138,8 @@ void ServiceBuilder::parseServiceDescription(const QByteArray &data)
     enum class ParserState {
         TopLevelElement,
         Action,
-        Argument
+        Argument,
+        StateVariable
     } state = ParserState::TopLevelElement;
     QXmlStreamReader reader(data);
 
@@ -115,6 +149,8 @@ void ServiceBuilder::parseServiceDescription(const QByteArray &data)
     QString argumentName;
     QString argumentStateVariable;
     Argument::Direction argumentDirection;
+    QString variableName;
+    StateVariable::Type variableType;
 
     if (reader.atEnd()) {
         qDebug() << "ServiceBuilder: empty description document";
@@ -146,8 +182,12 @@ void ServiceBuilder::parseServiceDescription(const QByteArray &data)
 
         switch (state) {
         case ParserState::TopLevelElement:
-            if ((tokenType == QXmlStreamReader::StartElement) && (tagName == ACTION_TAG))
-                state = ParserState::Action;
+            if (tokenType == QXmlStreamReader::StartElement) {
+                if (tagName == ACTION_TAG)
+                    state = ParserState::Action;
+                else if (tagName == STATE_VARIABLE)
+                    state = ParserState::StateVariable;
+            }
             break;
         case ParserState::Action:
             if (tokenType == QXmlStreamReader::StartElement) {
@@ -183,6 +223,80 @@ void ServiceBuilder::parseServiceDescription(const QByteArray &data)
                 argumentStateVariable.clear();
                 state = ParserState::Action;
             }
+            break;
+        case ParserState::StateVariable:
+            if (tokenType == QXmlStreamReader::StartElement) {
+                if (tagName == NAME_TAG)
+                    variableName = reader.readElementText();
+                else if (tagName == DATA_TYPE) {
+                    auto value = reader.readElementText();
+
+                    if (value == VALUE_UINT1)
+                        variableType = StateVariable::Type::Uint1;
+                    else if (value == VALUE_UINT2)
+                        variableType = StateVariable::Type::Uint2;
+                    else if (value == VALUE_UINT4)
+                        variableType = StateVariable::Type::Uint4;
+                    else if (value == VALUE_INT1)
+                        variableType = StateVariable::Type::Int1;
+                    else if (value == VALUE_INT2)
+                        variableType = StateVariable::Type::Int2;
+                    else if (value == VALUE_INT4)
+                        variableType = StateVariable::Type::Int4;
+                    else if (value == VALUE_INT)
+                        variableType = StateVariable::Type::Int;
+                    else if (value == VALUE_REAL4)
+                        variableType = StateVariable::Type::Real4;
+                    else if (value == VALUE_REAL8)
+                        variableType = StateVariable::Type::Real8;
+                    else if (value == VALUE_NUMBER)
+                        variableType = StateVariable::Type::Number;
+                    else if (value == VALUE_FIXED_14_4)
+                        variableType = StateVariable::Type::Fixed_14_4;
+                    else if (value == VALUE_FLOAT)
+                        variableType = StateVariable::Type::Float;
+                    else if (value == VALUE_CHAR)
+                        variableType = StateVariable::Type::Char;
+                    else if (value == VALUE_STRING)
+                        variableType = StateVariable::Type::String;
+                    else if (value == VALUE_DATE)
+                        variableType = StateVariable::Type::Date;
+                    else if (value == VALUE_DATETIME)
+                        variableType = StateVariable::Type::Datetime;
+                    else if (value == VALUE_DATETIME_TZ)
+                        variableType = StateVariable::Type::Datetime_tz;
+                    else if (value == VALUE_TIME)
+                        variableType = StateVariable::Type::Time;
+                    else if (value == VALUE_TIME_TZ)
+                        variableType = StateVariable::Type::Time_tz;
+                    else if (value == VALUE_BOOLEAN)
+                        variableType = StateVariable::Type::Boolean;
+                    else if (value == VALUE_BIN_BASE64)
+                        variableType = StateVariable::Type::Bin_Base64;
+                    else if (value == VALUE_BIN_HEX)
+                        variableType = StateVariable::Type::Bin_Hex;
+                    else if (value == VALUE_URI)
+                        variableType = StateVariable::Type::Uri;
+                    else if (value == VALUE_UUID)
+                        variableType = StateVariable::Type::Uuid;
+                    else
+                        qDebug() << "ServiceBuilder::parseServiceDescription: invalid value"
+                                 << value;
+                } else if (tagName == ALLOWED_VALUE) {
+                    //
+                } else if (tagName == DEFAULT_VALUE) {
+                    //
+                } else if (tagName == ALLOWED_VALUE_RANGE) {
+                    //
+                }
+            } else if (tokenType == QXmlStreamReader::EndElement) {
+                if (tagName == STATE_VARIABLE) {
+                    m_instance->m_stateVariables.emplace_back(variableName, variableType,
+                                                              QVariant());
+                    state = ParserState::TopLevelElement;
+                }
+            }
+            break;
         }
     }
     if (reader.hasError()) {
