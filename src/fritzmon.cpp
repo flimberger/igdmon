@@ -4,7 +4,10 @@
 #include "upnp/Device.hpp"
 #include "upnp/DeviceFinder.hpp"
 #include "upnp/Service.hpp"
+#include "upnp/ServiceBuilder.hpp"
 #include "upnp/StateVariable.hpp"
+
+#include "soap/Request.hpp"
 
 #include <QtCore/QDebug>
 #include <QtCore/QUrl>
@@ -21,8 +24,6 @@ using namespace fritzmon;
 static constexpr auto *APPUI_QML_PATH = "qrc:/fritzmon/qml/appui.qml";
 // static constexpr auto *DEVICE_DESCRIPTION_URL = "http://fritz.box:49000/igddesc.xml";
 static constexpr auto *DEVICE_DESCRIPTION_URL = "https://fritz.box:49443/igddesc.xml";
-static constexpr auto *GET_RECV_BYTES_ACTION_NAME = "GetTotalBytesReceived";
-static constexpr auto *GET_SENT_BYTES_ACTION_NAME = "GetTotalBytesSent";
 
 void dumpService(upnp::Service *service)
 {
@@ -49,12 +50,11 @@ void queryDevice(upnp::Device *device)
             if (service->serviceTypeIdentifier()
                     == "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1") {
                 qDebug() << "queryDevice: query" << service->id();
-                // service->invokeAction(GET_RECV_BYTES_ACTION_NAME, nullptr, nullptr, nullptr);
-                // service->invokeAction(GET_SENT_BYTES_ACTION_NAME, nullptr, nullptr, nullptr);
+
                 auto dummy = QVariant();
 
                 service->queryStateVariable("ByteReceiveRate", dummy);
-//                service->queryStateVariable("ByteSendRate", dummy);
+                service->queryStateVariable("ByteSendRate", dummy);
             }
     } else
         for (const auto &subdevice : device->children())
