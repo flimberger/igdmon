@@ -131,9 +131,9 @@ void Request::parseReply(const QByteArray &data)
                 for (auto &handlerPair : m_messageBodyHandlers)
                     if (std::get<0>(handlerPair) == namespaceURI) {
                         if (token == QXmlStreamReader::StartElement)
-                            std::get<1>(handlerPair)->startElementHandler(tag.toString(), stream);
+                            std::get<1>(handlerPair)->startElement(tag.toString(), stream);
                         else
-                            std::get<1>(handlerPair)->endElementHandler(tag.toString());
+                            std::get<1>(handlerPair)->endElement(tag.toString());
                     }
             break;
         }

@@ -16,55 +16,88 @@ static constexpr auto *QUERY_STATE_VARIABLE = "QueryStateVariable";
 static constexpr auto *VAR_NAME = "varName";
 static constexpr auto *GET_RECV_BYTES_NS_URI = "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1";
 
-class GetTotalBytesReceivedResponseHandler : public soap::IMessageBodyHandler
+class GetAddonInfoResponseHandler : public soap::IMessageBodyHandler
 {
 public:
-    GetTotalBytesReceivedResponseHandler(const QString &namespaceURI);
+    GetAddonInfoResponseHandler(const QString &namespaceURI);
 
-    bool startElementHandler(const QString &tag, QXmlStreamReader &stream) override;
-    bool endElementHandler(const QString &tag) override;
+    bool startElement(const QString &tag, QXmlStreamReader &stream) override;
+    bool endElement(const QString &tag) override;
 
     int value() const;
 
 private:
-    static constexpr auto *GET_RECV_BYTES_RESPONSE_TAG = "GetTotalBytesReceivedResponse";
-    static constexpr auto *GET_RECV_BYTES_TAG = "NewTotalBytesSent";
+    static constexpr auto *GET_ADDON_INFOS_RESPONSE_TAG = "GetAddonInfosResponse";
+    static constexpr auto *NEW_BYTE_SEND_RATE_TAG = "NewByteSendRate";
+    static constexpr auto *NEW_BYTE_RECEIVE_RATE_TAG = "NewByteReceiveRate";
+    static constexpr auto *NEW_PACKET_SEND_RATE_TAG = "NewPacketSendRate";
+    static constexpr auto *NEW_PACKET_RECEIVE_RATE_TAG = "NewPacketReceiveRate";
+    static constexpr auto *NEW_TOTAL_BYTES_SENT_TAG = "NewTotalBytesSent";
+    static constexpr auto *NEW_TOTAL_BYTES_RECEIVED_TAG = "NewTotalBytesReceived";
+    static constexpr auto *NEW_AUTO_DISCONNECT_TIME_TAG = "NewAutoDisconnectTime";
+    static constexpr auto *NEW_IDLE_DISCONNECT_TIME_TAG = "NewIdleDisconnectTime";
+    static constexpr auto *NEW_DNS_SERVER_1_TAG = "NewDNSServer1";
+    static constexpr auto *NEW_DNS_SERVER_2_TAG = "NewDNSServer2";
+    static constexpr auto *NEW_VOID_DNS_SERVER_1_TAG = "NewVoipDNSServer1";
+    static constexpr auto *NEW_VOID_DNS_SERVER_2_TAG = "NewVoipDNSServer2";
+    static constexpr auto *NEW_UPNP_CONTROL_ENABLED = "NewUpnpControlEnabled";
+    static constexpr auto *NEW_ROUTED_BRIDGED_MODE_BOTH = "NewRoutedBridgedModeBoth";
 
     enum class ParserState {
         Root,
         Envelope,
     } m_state;
-    int m_value;
 };
 
-GetTotalBytesReceivedResponseHandler::GetTotalBytesReceivedResponseHandler(const QString &namespaceURI)
+GetAddonInfoResponseHandler::GetAddonInfoResponseHandler(const QString &namespaceURI)
   : soap::IMessageBodyHandler(namespaceURI),
-    m_state(ParserState::Root),
-    m_value(0)
+    m_state(ParserState::Root)
 {}
 
-bool GetTotalBytesReceivedResponseHandler::startElementHandler(const QString &tag,
-                                                               QXmlStreamReader &stream)
+bool GetAddonInfoResponseHandler::startElement(const QString &tag, QXmlStreamReader &stream)
 {
     if (m_state == ParserState::Root) {
-        if (tag == GET_RECV_BYTES_RESPONSE_TAG)
+        if (tag == GET_ADDON_INFOS_RESPONSE_TAG)
             m_state = ParserState::Envelope;
     } else {
-        if (tag == GET_RECV_BYTES_TAG) {
-            m_value = stream.readElementText().toInt();
-            qDebug() << "GetTotalBytesReceivedResponseHandler::startElementHandler: " << m_value;
+        if (tag == NEW_BYTE_SEND_RATE_TAG) {
+            ;
+        } else if (tag == NEW_BYTE_SEND_RATE_TAG) {
+            ;
+        } else if (tag == NEW_BYTE_RECEIVE_RATE_TAG) {
+            ;
+        } else if (tag == NEW_PACKET_SEND_RATE_TAG) {
+            ;
+        } else if (tag == NEW_PACKET_RECEIVE_RATE_TAG) {
+            ;
+        } else if (tag == NEW_TOTAL_BYTES_SENT_TAG) {
+            ;
+        } else if (tag == NEW_TOTAL_BYTES_RECEIVED_TAG) {
+            ;
+        } else if (tag == NEW_AUTO_DISCONNECT_TIME_TAG) {
+            ;
+        } else if (tag == NEW_IDLE_DISCONNECT_TIME_TAG) {
+            ;
+        } else if (tag == NEW_DNS_SERVER_1_TAG) {
+            ;
+        } else if (tag == NEW_DNS_SERVER_2_TAG) {
+            ;
+        } else if (tag == NEW_VOID_DNS_SERVER_1_TAG) {
+            ;
+        } else if (tag == NEW_VOID_DNS_SERVER_2_TAG) {
+            ;
+        } else if (tag == NEW_UPNP_CONTROL_ENABLED) {
+            ;
+        } else if (tag == NEW_ROUTED_BRIDGED_MODE_BOTH) {
+            ;
         }
     }
 
     return true;
 }
 
-bool GetTotalBytesReceivedResponseHandler::endElementHandler(const QString &tag)
+bool GetAddonInfoResponseHandler::endElement(const QString &tag)
 {
-    if (m_state == ParserState::Envelope)
-        if (tag == GET_RECV_BYTES_TAG)
-            m_state = ParserState::Root;
-
     return true;
 }
 
@@ -79,9 +112,9 @@ Service::Service(QObject *parent)
     m_request(std::make_unique<soap::Request>())
 {
     m_request->addMessageHandler(GET_RECV_BYTES_NS_URI,
-                                 std::make_shared<GetTotalBytesReceivedResponseHandler>(GET_RECV_BYTES_NS_URI));
+                                 std::make_shared<GetAddonInfoResponseHandler>(GET_RECV_BYTES_NS_URI));
     m_request->addMessageHandler("",
-                                 std::make_shared<GetTotalBytesReceivedResponseHandler>(GET_RECV_BYTES_NS_URI));
+                                 std::make_shared<GetAddonInfoResponseHandler>(GET_RECV_BYTES_NS_URI));
 }
 
 Service::~Service() = default;

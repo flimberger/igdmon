@@ -16,8 +16,8 @@ public:
 
     QString namespaceURI() const;
 
-    virtual bool startElementHandler(const QString &tag, QXmlStreamReader &stream) = 0;
-    virtual bool endElementHandler(const QString &tag) = 0;
+    virtual bool startElement(const QString &tag, QXmlStreamReader &stream) = 0;
+    virtual bool endElement(const QString &tag) = 0;
 
 private:
     QString m_namespaceURI;
