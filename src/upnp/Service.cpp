@@ -87,14 +87,13 @@ Service::Service(QObject *parent)
     m_eventSubURL(),
     m_request(std::make_unique<soap::Request>())
 {
-    auto *handler = new GetAddonInfoResponseHandler(WAN_COMMON_INTERFACE_CONFIG_NAMESPACE_URI,
-                                                std::bind(&Service::onActionFinished, this,
-                                                          std::placeholders::_1,
-                                                          std::placeholders::_2));
-    auto handlerPtr = std::shared_ptr<GetAddonInfoResponseHandler>(handler);
+    auto handler = std::make_shared<GetAddonInfoResponseHandler>(
+                WAN_COMMON_INTERFACE_CONFIG_NAMESPACE_URI, std::bind(&Service::onActionFinished,
+                                                                     this, std::placeholders::_1,
+                                                                     std::placeholders::_2));
 
-    m_request->addMessageHandler(WAN_COMMON_INTERFACE_CONFIG_NAMESPACE_URI, handlerPtr);
-    m_request->addMessageHandler("", handlerPtr);
+    m_request->addMessageHandler(WAN_COMMON_INTERFACE_CONFIG_NAMESPACE_URI, handler);
+    m_request->addMessageHandler("", handler);
 }
 
 Service::~Service() = default;
