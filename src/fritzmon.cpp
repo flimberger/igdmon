@@ -39,24 +39,6 @@ static constexpr auto *NEW_BYTE_RECEIVE_RATE_ARGUMENT = "NewByteReceiveRate";
 static GraphModel *downstreamData = nullptr;
 static GraphModel *upstreamData = nullptr;
 
-void dumpService(upnp::Service *service)
-{
-    qDebug() << "\t" << service->id() << service->serviceTypeIdentifier();
-    for (const auto &action : service->actions())
-        qDebug() << "\t\taction:" << action.name();
-    for (const auto &variable : service->stateVariables())
-        qDebug() << "\t\tstate variable:" << variable.name();
-}
-
-void dumpDevice(upnp::Device *device)
-{
-    qDebug() << device->friendlyName() << device->type();
-    for (const auto &service : device->services())
-        dumpService(service.get());
-    for (const auto &subDevice : device->children())
-        dumpDevice(subDevice.get());
-}
-
 void onServiceActionInvoked(const QVariantMap &outputArguments, const QVariant &returnValue)
 {
     qDebug() << "::onServiceActionInvoked: return value:" << returnValue;
@@ -117,7 +99,6 @@ int main(int argc, char *argv[])
 
     upnp::DeviceFinder deviceFinder;
 
-    QObject::connect(&deviceFinder, &upnp::DeviceFinder::deviceAdded, &dumpDevice);
     QObject::connect(&deviceFinder, &upnp::DeviceFinder::deviceAdded, &queryDevice);
 
     deviceFinder.findDevice(QUrl(DEVICE_DESCRIPTION_URL));
