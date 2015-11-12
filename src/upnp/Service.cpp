@@ -122,8 +122,6 @@ void Service::queryStateVariable(const QString &name, QVariant &value)
     stream.writeCharacters(name);
     stream.writeEndElement();
     stream.writeEndElement();
-//    auto soapBody = QString("<u:%1 xmlns:u=\"%2\"><u:varName>%3</u:varName></u:%1>")
-//            .arg(QUERY_STATE_VARIABLE).arg(UPNP_CONTROL_NAMESPACE_URI).arg(name);
 
     qDebug() << "Service::queryStateVariable: " << data;
     m_request->start(m_controlURL, soapAction, data);
