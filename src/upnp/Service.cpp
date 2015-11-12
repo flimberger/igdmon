@@ -8,6 +8,7 @@
 #include <QtCore/QXmlStreamReader>
 #include <QtCore/QXmlStreamWriter>
 
+#include <algorithm>
 #include <functional>
 
 namespace fritzmon {
@@ -85,7 +86,8 @@ Service::Service(QObject *parent)
     m_scpdURL(),
     m_controlURL(),
     m_eventSubURL(),
-    m_request(std::make_unique<soap::Request>())
+    m_request(std::make_unique<soap::Request>()),
+    m_invokationPending(false)
 {
     auto handler = std::make_shared<GetAddonInfoResponseHandler>(
                 WAN_COMMON_INTERFACE_CONFIG_NAMESPACE_URI, std::bind(&Service::onActionFinished,
@@ -98,8 +100,18 @@ Service::Service(QObject *parent)
 
 Service::~Service() = default;
 
-void Service::invokeAction(const QString &name, const QVariantMap &inputArguments)
+Service::InvokeActionResult Service::invokeAction(const QString &name, const QVariantMap &inputArguments)
 {
+    if (m_invokationPending)
+        return InvokeActionResult::PendingAction;
+
+    if (!std::any_of(std::cbegin(m_actions), std::cend(m_actions), [&name](const Action &action) {
+            return action.name() == name;
+        }))
+        return InvokeActionResult::InvalidAction;
+
+    m_invokationPending = true;
+
     const auto end = std::cend(inputArguments);
     auto soapAction = m_type + "#" + name;
     auto soapBody = QByteArray();
@@ -112,6 +124,8 @@ void Service::invokeAction(const QString &name, const QVariantMap &inputArgument
     stream.writeEndElement();
 
     m_request->start(m_controlURL, soapAction, soapBody);
+
+    return InvokeActionResult::Success;
 }
 
 void Service::queryStateVariable(const QString &name, QVariant &value)
@@ -154,6 +168,8 @@ const std::vector<StateVariable> &Service::stateVariables() const
 
 void Service::onActionFinished(const QVariantMap &outputArguments, const QVariant &returnValue)
 {
+    m_invokationPending = false;
+
     emit actionInvoked(outputArguments, returnValue);
 }
 

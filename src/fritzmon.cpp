@@ -65,7 +65,8 @@ void queryDevice(upnp::Device *device)
                 qDebug() << "queryDevice: query" << service->id();
 
                 QObject::connect(service.get(), &upnp::Service::actionInvoked, &printResponse);
-                service->invokeAction(GET_ADDON_INFOS_ACTION_NAME, QVariantMap());
+                if (service->invokeAction(GET_ADDON_INFOS_ACTION_NAME, QVariantMap()) != upnp::Service::InvokeActionResult::Success)
+                    qDebug() << "::queryDevice: invocation failed";
             }
     } else
         for (const auto &subdevice : device->children())

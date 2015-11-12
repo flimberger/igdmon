@@ -34,10 +34,17 @@ class Service : public QObject
     Q_OBJECT
 
 public:
+    enum class InvokeActionResult {
+        Success,
+        PendingAction,    //< There is already an invocation pending
+        InvocationFailed, //< The invocation failed
+        InvalidAction     //< no such action available from this service
+    };
+
     explicit Service(QObject *parent=nullptr);
     ~Service();
 
-    void invokeAction(const QString &name, const QVariantMap &inputArguments);
+    InvokeActionResult invokeAction(const QString &name, const QVariantMap &inputArguments);
     void queryStateVariable(const QString &name, QVariant &value);
 
     QString id() const;
@@ -63,6 +70,7 @@ private:
     QUrl m_controlURL;
     QUrl m_eventSubURL;
     std::unique_ptr<soap::Request> m_request;
+    bool m_invokationPending;
 
     friend class internal::ServiceBuilder;
     Q_DISABLE_COPY(Service)
