@@ -47,8 +47,13 @@ void dumpDevice(upnp::Device *device)
 void printResponse(const QVariantMap &outputArguments, const QVariant &returnValue)
 {
     qDebug() << "::printResponse: return value:" << returnValue;
-    for (const auto &value : outputArguments)
-        qDebug() << "::printResponse:" << value;
+
+    if (!outputArguments.empty()) {
+        const auto end = std::cend(outputArguments);
+
+        for (auto i = std::cbegin(outputArguments); i != end; ++i)
+            qDebug() << "::printResponse:" << i.key() << ":" << i.value().toString();
+    }
 }
 
 void queryDevice(upnp::Device *device)
