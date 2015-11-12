@@ -13,6 +13,12 @@
 namespace fritzmon {
 namespace soap {
 
+#if defined(SOAP_REQUEST_DEBUG_DUMP)
+static constexpr auto REQUEST_DEBUG_DUMP = true;
+#else
+static constexpr auto REQUEST_DEBUG_DUMP = false;
+#endif
+
 // static constexpr auto *SOAP_NAMESPACE_URI = "http://www.w3.org/2003/05/soap-envelope";
 static constexpr auto *SOAP_NAMESPACE_URI = "http://schemas.xmlsoap.org/soap/envelope/";
 static constexpr auto *SOAP_ROOT = "Envelope";
@@ -46,9 +52,11 @@ void Request::start(const QUrl &url, const QString &action, const QString &bodyT
     auto requestText = QString(ENVELOPE_BEGIN).append(bodyText).append(ENVELOPE_END).toUtf8();
     auto request = QNetworkRequest(url);
 
-    qDebug() << "Request::start: >>>>>>>>";
-    qDebug() << "Request::start: " << requestText;
-    qDebug() << "Request::start: >>>>>>>>";
+    if (REQUEST_DEBUG_DUMP) {
+        qDebug() << "Request::start: >>>>>>>>";
+        qDebug() << "Request::start: " << requestText;
+        qDebug() << "Request::start: >>>>>>>>";
+    }
 
     request.setHeader(QNetworkRequest::ContentTypeHeader, CONTENT_TYPE);
     request.setRawHeader(SOAPACTION_HEADER, action.toUtf8());
@@ -82,9 +90,11 @@ void Request::parseReply(const QByteArray &data)
         Body
     } state = ParserState::Start;
 
-    qDebug() << "Request::parseReply: <<<<<<<<";
-    qDebug() << "Request::parseReply:" << data;
-    qDebug() << "Request::parseReply: <<<<<<<<";
+    if (REQUEST_DEBUG_DUMP) {
+        qDebug() << "Request::parseReply: <<<<<<<<";
+        qDebug() << "Request::parseReply:" << data;
+        qDebug() << "Request::parseReply: <<<<<<<<";
+    }
     if (stream.atEnd()) {
         qDebug() << "Request::parseReply: empty description document";
 
