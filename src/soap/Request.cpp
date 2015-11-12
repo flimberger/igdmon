@@ -6,6 +6,7 @@
 
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
+#include <QtNetwork/QSslError>
 
 #include <tuple>
 
@@ -25,9 +26,11 @@ static constexpr auto *ENVELOPE_END = "</s:Body></s:Envelope>";
 
 Request::Request(QObject *parent)
   : QObject(parent),
-    m_networkAccess()
+    m_networkAccess(),
+    m_messageBodyHandlers()
 {
     connect(&m_networkAccess, &QNetworkAccessManager::finished, this, &Request::onRequestCompleted);
+    connect(&m_networkAccess, &QNetworkAccessManager::sslErrors, this, &Request::onSslErrors);
 }
 
 Request::~Request() = default;
@@ -47,9 +50,6 @@ void Request::start(const QUrl &url, const QString &action, const QString &bodyT
     qDebug() << "Request::start: " << requestText;
     qDebug() << "Request::start: >>>>>>>>";
 
-    request.setRawHeader(QString("WWW-Authenticate").toUtf8(),
-                         QString("rmon:8ElAAMg/3OEOLlHB8NMLwnSpuPBiMJvi3eRXoANCFTY=====")
-                            .toUtf8().toBase64());
     request.setHeader(QNetworkRequest::ContentTypeHeader, CONTENT_TYPE);
     request.setRawHeader(SOAPACTION_HEADER, action.toUtf8());
     m_networkAccess.post(request, requestText);
@@ -63,6 +63,14 @@ void Request::onRequestCompleted(QNetworkReply *reply)
         parseReply(reply->readAll());
 
     emit finished();
+}
+
+void Request::onSslErrors(QNetworkReply *reply, const QList<QSslError> &errors)
+{
+    if ((errors.size() == 1) && (errors[0].error() == QSslError::SelfSignedCertificate)) {
+        qDebug() << "Request::onSslErrors: self-signed certificate (ignored)";
+        reply->ignoreSslErrors();
+    }
 }
 
 void Request::parseReply(const QByteArray &data)

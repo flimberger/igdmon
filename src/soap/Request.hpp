@@ -1,15 +1,18 @@
 #ifndef FRITZMON_SOAP_REQUEST_HPP
 #define FRITZMON_SOAP_REQUEST_HPP
 
+#include <QtCore/QList>
 #include <QtCore/QObject>
 
 #include <QtNetwork/QNetworkAccessManager>
 
 #include <memory>
 #include <utility>
+#include <string>
 #include <vector>
 
 class QNetworkReply;
+class QSslError;
 
 namespace fritzmon {
 namespace soap {
@@ -33,6 +36,7 @@ Q_SIGNALS:
 
 private:
     Q_SLOT void onRequestCompleted(QNetworkReply *reply);
+    Q_SLOT void onSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
     void parseReply(const QByteArray &data);
 
     QNetworkAccessManager m_networkAccess;
