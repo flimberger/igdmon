@@ -7,8 +7,6 @@
 
 #include <QtQml/QQmlContext>
 
-#include <QtQuick/QQuickView>
-
 #include <algorithm>
 
 namespace fritzmon {
@@ -31,14 +29,13 @@ MonitorApp::MonitorApp(QObject *parent)
     connect(&m_deviceFinder, &upnp::DeviceFinder::deviceAdded, this, &MonitorApp::onDeviceAdded);
     m_deviceFinder.findDevice(QUrl(DEVICE_DESCRIPTION_URL));
 
-    QQuickView view;
-    auto *rootContext = view.rootContext();
+    auto *rootContext = m_view.rootContext();
 
     rootContext->setContextProperty(DOWNSTREAM_DATA_PROPERTY, QVariant::fromValue(m_downstreamData));
     rootContext->setContextProperty(UPSTREAM_DATA_PROPERTY, QVariant::fromValue(m_upstreamData));
-    view.setSource(QUrl(APPUI_QML_PATH));
-    view.setResizeMode(QQuickView::SizeRootObjectToView);
-    view.show();
+    m_view.setSource(QUrl(APPUI_QML_PATH));
+    m_view.setResizeMode(QQuickView::SizeRootObjectToView);
+    m_view.show();
 }
 
 void MonitorApp::onDeviceAdded(upnp::Device *device)

@@ -6,6 +6,8 @@
 #include <QtCore/QObject>
 #include <QtCore/QTimer>
 
+#include <QtQuick/QQuickView>
+
 namespace fritzmon {
 
 namespace upnp {
@@ -32,6 +34,7 @@ private:
     QTimer m_updateTimer;
     GraphModel *m_upstreamData;
     upnp::Service *m_wanCommonConfigService;
+    QQuickView m_view;
 };
 
 } // namespace fritzmon
