@@ -28,9 +28,11 @@ private:
     Q_SLOT void onDeviceAdded(upnp::Device *device);
     Q_SLOT void onServiceActionInvoked(const QVariantMap &outputArguments,
                                        const QVariant &returnValue);
+    Q_SLOT void onUpdateTimeout();
 
     upnp::DeviceFinder m_deviceFinder;
     GraphModel *m_downstreamData;
+    int m_updatePeriod;
     QTimer m_updateTimer;
     GraphModel *m_upstreamData;
     upnp::Service *m_wanCommonConfigService;

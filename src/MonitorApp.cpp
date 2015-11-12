@@ -12,6 +12,7 @@
 namespace fritzmon {
 
 static constexpr auto *APPUI_QML_PATH = "qrc:/fritzmon/qml/appui.qml";
+static constexpr auto DEFAULT_UPDATE_PERIOD = 2500; //< update period in ms
 static constexpr auto *DEVICE_DESCRIPTION_URL = "https://fritz.box:49443/igddesc.xml";
 static constexpr auto *DOWNSTREAM_DATA_PROPERTY = "downstreamData";
 static constexpr auto *GET_ADDON_INFOS_ACTION_NAME = "GetAddonInfos";
@@ -24,6 +25,7 @@ static constexpr auto *WAN_DEVICE_TYPE = "urn:schemas-upnp-org:device:WANDevice:
 MonitorApp::MonitorApp(QObject *parent)
   : QObject(parent),
     m_downstreamData(new GraphModel),
+    m_updatePeriod(DEFAULT_UPDATE_PERIOD),
     m_upstreamData(new GraphModel)
 {
     connect(&m_deviceFinder, &upnp::DeviceFinder::deviceAdded, this, &MonitorApp::onDeviceAdded);
@@ -50,9 +52,9 @@ void MonitorApp::onDeviceAdded(upnp::Device *device)
             m_wanCommonConfigService = service->get();
             connect(m_wanCommonConfigService, &upnp::Service::actionInvoked,
                     this,                     &MonitorApp::onServiceActionInvoked);
-            if (m_wanCommonConfigService->invokeAction(GET_ADDON_INFOS_ACTION_NAME, QVariantMap())
-                    != upnp::Service::InvokeActionResult::Success)
-                qDebug() << "MonitorApp::onDeviceAdded: invocation failed";
+            connect(&m_updateTimer, &QTimer::timeout, this, &MonitorApp::onUpdateTimeout);
+            onUpdateTimeout();
+            m_updateTimer.start(m_updatePeriod);
         }
     } else
         for (const auto &subdevice : device->children())
@@ -62,24 +64,37 @@ void MonitorApp::onDeviceAdded(upnp::Device *device)
 void MonitorApp::onServiceActionInvoked(const QVariantMap &outputArguments,
                                         const QVariant &returnValue)
 {
-    qDebug() << "::onServiceActionInvoked: return value:" << returnValue;
+    qDebug() << "MonitorApp::onServiceActionInvoked: return value:" << returnValue;
 
     if (outputArguments.empty())
-        qDebug() << "::onServiceActionInvoked: no output arguments";
+        qDebug() << "MonitorApp::onServiceActionInvoked: no output arguments";
     else {
-        if (outputArguments.contains(NEW_BYTE_RECEIVE_RATE_ARGUMENT))
-            m_downstreamData->addSample(outputArguments[NEW_BYTE_RECEIVE_RATE_ARGUMENT].toString()
-                                                                                       .toFloat());
-        else
-            qDebug() << "::onServiceActionInvoked: no argument named"
+        if (outputArguments.contains(NEW_BYTE_RECEIVE_RATE_ARGUMENT)) {
+            auto value = outputArguments[NEW_BYTE_RECEIVE_RATE_ARGUMENT].toString().toFloat();
+
+            m_downstreamData->addSample(value);
+            qDebug() << "MonitorApp::onServiceActionInvoked: downstream=" << value;
+        } else
+            qDebug() << "MonitorApp::onServiceActionInvoked: no argument named"
                      << NEW_BYTE_RECEIVE_RATE_ARGUMENT;
-        if (outputArguments.contains(NEW_BYTE_SEND_RATE_ARGUMENT))
-            m_downstreamData->addSample(outputArguments[NEW_BYTE_SEND_RATE_ARGUMENT].toString()
-                                                                                    .toFloat());
-        else
-            qDebug() << "::onServiceActionInvoked: no argument named"
+        if (outputArguments.contains(NEW_BYTE_SEND_RATE_ARGUMENT)) {
+            auto value = outputArguments[NEW_BYTE_SEND_RATE_ARGUMENT].toString().toFloat();
+
+            m_downstreamData->addSample(value);
+            qDebug() << "MonitorApp::onServiceActionInvoked: downstream=" << value;
+        } else
+            qDebug() << "MonitorApp::onServiceActionInvoked: no argument named"
                      << NEW_BYTE_SEND_RATE_ARGUMENT;
     }
+}
+
+void MonitorApp::onUpdateTimeout()
+{
+    static auto noArg = QVariantMap();
+
+    if (m_wanCommonConfigService->invokeAction(GET_ADDON_INFOS_ACTION_NAME, noArg)
+            != upnp::Service::InvokeActionResult::Success)
+        qDebug() << "MonitorApp::onDeviceAdded: invocation failed";
 }
 
 } // namespace fritzmon
