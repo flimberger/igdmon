@@ -14,16 +14,19 @@
 namespace fritzmon {
 namespace upnp {
 
+using MessageFinishedCallback = std::function<void(const QVariantMap&, const QVariant &)>;
+
 static constexpr auto *UPNP_CONTROL_NAMESPACE_URI = "urn:schemas-upnp-org:control-1-0";
 static constexpr auto *QUERY_STATE_VARIABLE_TAG = "QueryStateVariable";
+static constexpr auto *RESPONSE_SUFFIX = "Response";
 static constexpr auto *VAR_NAME_TAG = "varName";
 static constexpr auto *WAN_COMMON_INTERFACE_CONFIG_NAMESPACE_URI = "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1";
 
-class GetAddonInfoResponseHandler : public soap::IMessageBodyHandler
+class UpnpResponseHandler : public soap::IMessageBodyHandler
 {
 public:
-    GetAddonInfoResponseHandler(const QString &namespaceURI,
-                                const std::function<void(const QVariantMap&, const QVariant &)> &finishedCallback);
+    UpnpResponseHandler(const QString &namespaceURI,
+                                const MessageFinishedCallback &finishedCallback);
 
     bool startElement(const QString &tag, QXmlStreamReader &stream) override;
     bool startMessage() override;
@@ -31,67 +34,51 @@ public:
     bool endMessage() override;
 
 private:
-    static constexpr auto *GET_ADDON_INFOS_RESPONSE_TAG = "GetAddonInfosResponse";
-    static constexpr auto *NEW_BYTE_SEND_RATE_TAG = "NewByteSendRate";
-    static constexpr auto *NEW_BYTE_RECEIVE_RATE_TAG = "NewByteReceiveRate";
-    static constexpr auto *NEW_PACKET_SEND_RATE_TAG = "NewPacketSendRate";
-    static constexpr auto *NEW_PACKET_RECEIVE_RATE_TAG = "NewPacketReceiveRate";
-    static constexpr auto *NEW_TOTAL_BYTES_SENT_TAG = "NewTotalBytesSent";
-    static constexpr auto *NEW_TOTAL_BYTES_RECEIVED_TAG = "NewTotalBytesReceived";
-    static constexpr auto *NEW_AUTO_DISCONNECT_TIME_TAG = "NewAutoDisconnectTime";
-    static constexpr auto *NEW_IDLE_DISCONNECT_TIME_TAG = "NewIdleDisconnectTime";
-    static constexpr auto *NEW_DNS_SERVER_1_TAG = "NewDNSServer1";
-    static constexpr auto *NEW_DNS_SERVER_2_TAG = "NewDNSServer2";
-    static constexpr auto *NEW_VOID_DNS_SERVER_1_TAG = "NewVoipDNSServer1";
-    static constexpr auto *NEW_VOID_DNS_SERVER_2_TAG = "NewVoipDNSServer2";
-    static constexpr auto *NEW_UPNP_CONTROL_ENABLED = "NewUpnpControlEnabled";
-    static constexpr auto *NEW_ROUTED_BRIDGED_MODE_BOTH = "NewRoutedBridgedModeBoth";
-
-    std::function<void(const QVariantMap&, const QVariant &)> m_finishedCallback;
+    MessageFinishedCallback m_finishedCallback;
+    QVariantMap m_outputArguments;
     enum class ParserState {
         Root,
         Envelope,
-    } m_state;
-    QVariantMap m_outputArguments;
+    } m_parserState;
 
     // used to suppress more than one finalizations, if the handler is installed multiple times
     bool m_finalized;
 };
 
-GetAddonInfoResponseHandler::GetAddonInfoResponseHandler(const QString &namespaceURI,
-                                                         const std::function<void(const QVariantMap&, const QVariant &)> &finishedCallback)
+UpnpResponseHandler::UpnpResponseHandler(const QString &namespaceURI,
+                                         const MessageFinishedCallback &finishedCallback)
   : soap::IMessageBodyHandler(namespaceURI),
     m_finishedCallback(finishedCallback)
 {}
 
-bool GetAddonInfoResponseHandler::startElement(const QString &tag, QXmlStreamReader &stream)
+bool UpnpResponseHandler::startElement(const QString &tag, QXmlStreamReader &stream)
 {
-    if ((m_state == ParserState::Root) && (tag == GET_ADDON_INFOS_RESPONSE_TAG))
-        m_state = ParserState::Envelope;
+    if ((m_parserState == ParserState::Root) && tag.endsWith(RESPONSE_SUFFIX))
+        m_parserState = ParserState::Envelope;
     else
         m_outputArguments[tag] = stream.readElementText();
 
     return true;
 }
 
-bool GetAddonInfoResponseHandler::startMessage()
+bool UpnpResponseHandler::startMessage()
 {
     m_finalized = false;
-    m_state = ParserState::Root;
+    m_parserState = ParserState::Root;
     m_outputArguments.clear();
 
     return true;
 }
 
-bool GetAddonInfoResponseHandler::endElement(const QString &tag)
+bool UpnpResponseHandler::endElement(const QString &tag)
 {
-    if ((m_state == ParserState::Envelope) && (tag == GET_ADDON_INFOS_RESPONSE_TAG))
-        m_state = ParserState::Root;
+    if ((m_parserState == ParserState::Envelope) && tag.endsWith(RESPONSE_SUFFIX))
+        m_parserState = ParserState::Root;
 
     return true;
 }
 
-bool GetAddonInfoResponseHandler::endMessage()
+bool UpnpResponseHandler::endMessage()
 {
     if (!m_finalized) {
         m_finishedCallback(m_outputArguments, QVariant());
@@ -111,10 +98,11 @@ Service::Service(QObject *parent)
     m_request(std::make_unique<soap::Request>()),
     m_invokationPending(false)
 {
-    auto handler = std::make_shared<GetAddonInfoResponseHandler>(
-                WAN_COMMON_INTERFACE_CONFIG_NAMESPACE_URI, std::bind(&Service::onActionFinished,
-                                                                     this, std::placeholders::_1,
-                                                                     std::placeholders::_2));
+    auto handler = std::make_shared<UpnpResponseHandler>(WAN_COMMON_INTERFACE_CONFIG_NAMESPACE_URI,
+                                                         std::bind(&Service::onActionFinished,
+                                                                   this,
+                                                                   std::placeholders::_1,
+                                                                   std::placeholders::_2));
 
     m_request->addMessageHandler(WAN_COMMON_INTERFACE_CONFIG_NAMESPACE_URI, handler);
     m_request->addMessageHandler("", handler);
