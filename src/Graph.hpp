@@ -61,6 +61,7 @@ class Graph : public QQuickItem
                NOTIFY backgroundColorChanged)
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
     Q_PROPERTY(QVariant model READ model WRITE setModel NOTIFY modelChanged)
+    Q_PROPERTY(float upperBound READ upperBound WRITE setUpperBound NOTIFY upperBoundChanged)
 
 public:
     Graph(QQuickItem *parent=nullptr);
@@ -75,10 +76,14 @@ public:
     void setColor(const QColor &newColor);
     QColor color() const;
 
+    void setUpperBound(float newUpperBound);
+    float upperBound() const;
+
 Q_SIGNALS:
     void backgroundColorChanged(const QColor &newColor);
     void colorChanged(const QColor &newColor);
     void modelChanged();
+    void upperBoundChanged(float newUpperBound);
 
 protected:
     void geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry) override;
@@ -91,6 +96,7 @@ private:
     QAbstractListModel *m_samplesModel;
     QColor m_color;
     QColor m_backgroundColor;
+    float m_upperBound;
     bool m_geometryChanged;
     bool m_samplesChanged;
 

@@ -160,7 +160,7 @@ class LineNode : public QSGGeometryNode
 public:
     LineNode(float size, float spread, const QColor &color);
 
-    void updateGeometry(const QRectF &bounds, const std::vector<float> &samples);
+    void updateGeometry(const QRectF &bounds, float upperBound, const std::vector<float> &samples);
 
 private:
     QSGGeometry m_geometry;
@@ -247,22 +247,22 @@ LineNode::LineNode(float size, float spread, const QColor &color)
     setFlag(OwnsMaterial);
 }
 
-void LineNode::updateGeometry(const QRectF &bounds, const std::vector<float> &samples)
+void LineNode::updateGeometry(const QRectF &bounds, float upperBound,
+                              const std::vector<float> &samples)
 {
     m_geometry.allocate(samples.size() * 2);
 
     auto x = bounds.x();
-    auto y = bounds.y();
     auto w = bounds.width();
     auto h = bounds.height();
     auto dx = w / (samples.size() - 1);
+    auto dy = h / upperBound;
     auto *vertex = static_cast<LineVertex *>(m_geometry.vertexData());
 
     for (int i = 0; i < samples.size(); ++i) {
         auto ix = x + dx * i;
-        auto iy = y + samples[i] * h;
+        auto iy = h - dy * samples[i];
 
-        qDebug() << i << samples[i] << ix << iy;
         vertex[i * 2].set(ix, iy, 0);
         vertex[i * 2 + 1].set(ix, iy, 1);
     }
@@ -284,8 +284,9 @@ Graph::Graph(QQuickItem *parent)
     m_samplesModel(nullptr),
     m_color(QColor("#ff9900")),
     m_backgroundColor(QColor("#333333")),
-    m_geometryChanged(true),
-    m_samplesChanged(true)
+    m_upperBound(10.0f),
+    m_geometryChanged(false),
+    m_samplesChanged(false)
 {
     setFlag(ItemHasContents, true);
 }
@@ -340,11 +341,29 @@ void Graph::setModel(const QVariant &newModel)
         connect(m_samplesModel, &QAbstractListModel::dataChanged,
                 this,           &Graph::onSampleDataChanged);
     emit modelChanged();
+
+    m_samplesChanged = true;
+    update();
 }
 
 QVariant Graph::model() const
 {
     return QVariant::fromValue(m_samplesModel);
+}
+
+void Graph::setUpperBound(float newUpperBound)
+{
+    m_upperBound = newUpperBound;
+
+    emit upperBoundChanged(newUpperBound);
+
+    m_samplesChanged = true;
+    update();
+}
+
+float Graph::upperBound() const
+{
+    return m_upperBound;
 }
 
 void Graph::geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry)
@@ -381,7 +400,7 @@ QSGNode *Graph::updatePaintNode(QSGNode *node, UpdatePaintNodeData *data)
 
         for (auto i = 0; i < rowCount; ++i)
             samples[i] = m_samplesModel->data(m_samplesModel->index(i)).value<float>();
-        nodeptr->line->updateGeometry(bounds, samples);
+        nodeptr->line->updateGeometry(bounds, m_upperBound, samples);
     }
     m_geometryChanged = false;
     m_samplesChanged = false;
@@ -390,13 +409,15 @@ QSGNode *Graph::updatePaintNode(QSGNode *node, UpdatePaintNodeData *data)
     return nodeptr.release();
 }
 
-void Graph::onSampleDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles)
+void Graph::onSampleDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight,
+                                const QVector<int> &roles)
 {
     Q_UNUSED(topLeft);
     Q_UNUSED(bottomRight);
     Q_UNUSED(roles);
 
     m_samplesChanged = true;
+    update();
 }
 
 } // namespace fritzmon
