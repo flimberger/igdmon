@@ -15,15 +15,21 @@ static constexpr auto *APPUI_QML_PATH = "qrc:/fritzmon/qml/appui.qml";
 static constexpr auto DEFAULT_UPDATE_PERIOD = 2500; //< update period in ms
 static constexpr auto *DEVICE_DESCRIPTION_URL = "https://fritz.box:49443/igddesc.xml";
 static constexpr auto *DOWNSTREAM_DATA_PROPERTY = "downstreamData";
+static constexpr auto *DOWNSTREAM_GRAPH = "downstreamGraph";
 static constexpr auto *GET_ADDON_INFOS_ACTION_NAME = "GetAddonInfos";
+static constexpr auto *GET_COMMON_LINK_PROPERTIES_ACTION_NAME = "GetCommonLinkProperties";
 static constexpr auto *NEW_BYTE_RECEIVE_RATE_ARGUMENT = "NewByteReceiveRate";
 static constexpr auto *NEW_BYTE_SEND_RATE_ARGUMENT = "NewByteSendRate";
+static constexpr auto *NEW_LAYER_1_DOWNSTREAM_MAX_BIT_RATE = "NewLayer1DownstreamMaxBitRate";
+static constexpr auto *NEW_LAYER_1_UPSTREAM_MAX_BIT_RATE = "NewLayer1UpstreamMaxBitRate";
 static constexpr auto *UPSTREAM_DATA_PROPERTY = "upstreamData";
+static constexpr auto *UPSTREAM_GRAPH = "upstreamGraph";
 static constexpr auto *WAN_COMMON_INTERFACE_CONFIG_SERVICE_TYPE = "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1";
 static constexpr auto *WAN_DEVICE_TYPE = "urn:schemas-upnp-org:device:WANDevice:1";
 
 MonitorApp::MonitorApp(QObject *parent)
   : QObject(parent),
+    m_appState(AppState::Initializing),
     m_downstreamData(new GraphModel),
     m_updatePeriod(DEFAULT_UPDATE_PERIOD),
     m_upstreamData(new GraphModel)
@@ -35,8 +41,8 @@ MonitorApp::MonitorApp(QObject *parent)
 
     rootContext->setContextProperty(DOWNSTREAM_DATA_PROPERTY, QVariant::fromValue(m_downstreamData));
     rootContext->setContextProperty(UPSTREAM_DATA_PROPERTY, QVariant::fromValue(m_upstreamData));
-    m_view.setSource(QUrl(APPUI_QML_PATH));
     m_view.setResizeMode(QQuickView::SizeRootObjectToView);
+    m_view.setSource(QUrl(APPUI_QML_PATH));
     m_view.show();
 }
 
@@ -53,7 +59,8 @@ void MonitorApp::onDeviceAdded(upnp::Device *device)
             connect(m_wanCommonConfigService, &upnp::Service::actionInvoked,
                     this,                     &MonitorApp::onServiceActionInvoked);
             connect(&m_updateTimer, &QTimer::timeout, this, &MonitorApp::onUpdateTimeout);
-            onUpdateTimeout();
+            m_wanCommonConfigService->invokeAction(GET_COMMON_LINK_PROPERTIES_ACTION_NAME,
+                                                   QVariantMap());
             m_updateTimer.start(m_updatePeriod);
         }
     } else
@@ -69,22 +76,65 @@ void MonitorApp::onServiceActionInvoked(const QVariantMap &outputArguments,
     if (outputArguments.empty())
         qDebug() << "MonitorApp::onServiceActionInvoked: no output arguments";
     else {
-        if (outputArguments.contains(NEW_BYTE_RECEIVE_RATE_ARGUMENT)) {
-            auto value = outputArguments[NEW_BYTE_RECEIVE_RATE_ARGUMENT].toString().toFloat();
+        switch (m_appState) {
+        case AppState::Initializing:
+            {
+            auto rootObject = m_view.rootObject();
 
-            m_downstreamData->addSample(value);
-            qDebug() << "MonitorApp::onServiceActionInvoked: downstream=" << value;
-        } else
-            qDebug() << "MonitorApp::onServiceActionInvoked: no argument named"
-                     << NEW_BYTE_RECEIVE_RATE_ARGUMENT;
-        if (outputArguments.contains(NEW_BYTE_SEND_RATE_ARGUMENT)) {
-            auto value = outputArguments[NEW_BYTE_SEND_RATE_ARGUMENT].toString().toFloat();
+            if (outputArguments.contains(NEW_LAYER_1_DOWNSTREAM_MAX_BIT_RATE)) {
+                auto value = outputArguments[NEW_LAYER_1_DOWNSTREAM_MAX_BIT_RATE].toString()
+                                                                                 .toFloat();
 
-            m_downstreamData->addSample(value);
-            qDebug() << "MonitorApp::onServiceActionInvoked: downstream=" << value;
-        } else
-            qDebug() << "MonitorApp::onServiceActionInvoked: no argument named"
-                     << NEW_BYTE_SEND_RATE_ARGUMENT;
+                qDebug() << "MonitorApp::onServiceActionInvoked: max downstream bit rate:" << value;
+
+                auto *graph = rootObject->findChild<Graph *>(DOWNSTREAM_GRAPH);
+
+                if (graph)
+                    graph->setUpperBound(value / 1024.0f); // convert bit to kbit
+                else
+                    qDebug() << "MonitorApp::onServiceActionInvoked: failed to find"
+                             << DOWNSTREAM_GRAPH;
+            } else
+                qDebug() << "MonitorApp::onServiceActionInvoked: no argument named"
+                         << NEW_LAYER_1_DOWNSTREAM_MAX_BIT_RATE;
+            if (outputArguments.contains(NEW_LAYER_1_UPSTREAM_MAX_BIT_RATE)) {
+                auto value = outputArguments[NEW_LAYER_1_UPSTREAM_MAX_BIT_RATE].toString()
+                                                                               .toFloat();
+
+                qDebug() << "MonitorApp::onServiceActionInvoked: max upstream bit rate:" << value;
+
+                auto *graph = rootObject->findChild<Graph *>(UPSTREAM_GRAPH);
+
+                if (graph)
+                    graph->setUpperBound(value / 1024.0f); // convert bit to kbit
+                else
+                    qDebug() << "MonitorApp::onServiceActionInvoked: failed to find"
+                             << UPSTREAM_GRAPH;
+            } else
+                qDebug() << "MonitorApp::onServiceActionInvoked: no argument named"
+                         << NEW_LAYER_1_DOWNSTREAM_MAX_BIT_RATE;
+            m_appState = AppState::Polling;
+            break;
+            }
+        case AppState::Polling:
+            if (outputArguments.contains(NEW_BYTE_RECEIVE_RATE_ARGUMENT)) {
+                auto value = outputArguments[NEW_BYTE_RECEIVE_RATE_ARGUMENT].toString().toFloat();
+
+                m_downstreamData->addSample(value * 8.0f / 1024.0f); // convert B to kbit
+                qDebug() << "MonitorApp::onServiceActionInvoked: downstream byte rate:" << value;
+            } else
+                qDebug() << "MonitorApp::onServiceActionInvoked: no argument named"
+                         << NEW_BYTE_RECEIVE_RATE_ARGUMENT;
+            if (outputArguments.contains(NEW_BYTE_SEND_RATE_ARGUMENT)) {
+                auto value = outputArguments[NEW_BYTE_SEND_RATE_ARGUMENT].toString().toFloat();
+
+                m_upstreamData->addSample(value * 8.0f / 1024.0f); // convert B to kbit
+                qDebug() << "MonitorApp::onServiceActionInvoked: upstream byte rate:" << value;
+            } else
+                qDebug() << "MonitorApp::onServiceActionInvoked: no argument named"
+                         << NEW_BYTE_SEND_RATE_ARGUMENT;
+            break;
+        }
     }
 }
 

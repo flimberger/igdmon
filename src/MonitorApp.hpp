@@ -30,6 +30,10 @@ private:
                                        const QVariant &returnValue);
     Q_SLOT void onUpdateTimeout();
 
+    enum class AppState {
+        Initializing,
+        Polling
+    } m_appState;
     upnp::DeviceFinder m_deviceFinder;
     GraphModel *m_downstreamData;
     int m_updatePeriod;

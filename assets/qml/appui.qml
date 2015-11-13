@@ -18,6 +18,7 @@ Item {
 
         Graph {
             id: downstream
+            objectName: "downstreamGraph"
             model: downstreamData
 
             color: "#ff9900"
@@ -26,6 +27,7 @@ Item {
         }
         Graph {
             id: upstream
+            objectName: "upstreamGraph"
             model: upstreamData
 
             color: "#9900ff"
