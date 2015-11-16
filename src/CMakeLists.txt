@@ -10,6 +10,7 @@ set(fritzmon_SRCS
     Graph.cpp
     GraphModel.cpp
     MonitorApp.cpp
+    Settings.cpp
     soap/IMessageBodyHandler.cpp
     soap/Request.cpp
     upnp/Action.cpp

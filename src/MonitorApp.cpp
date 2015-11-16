@@ -5,15 +5,23 @@
 #include "upnp/Device.hpp"
 #include "upnp/Service.hpp"
 
+#include <QtCore/QCoreApplication>
+
 #include <QtQml/QQmlContext>
 
 #include <algorithm>
 
 namespace fritzmon {
 
+static constexpr auto *ORG_NAME = "Purple Kraken Software";
+static constexpr auto *ORG_DOMAIN = "purplekraken.com";
+static constexpr auto *APP_NAME = "fritzmon";
 static constexpr auto *APPUI_QML_PATH = "qrc:/fritzmon/qml/appui.qml";
 static constexpr auto DEFAULT_UPDATE_PERIOD = 2500; //< update period in ms
-static constexpr auto *DEVICE_DESCRIPTION_URL = "https://fritz.box:49443/igddesc.xml";
+static constexpr auto *DEVICE_DEFAULT_HOST = "fritz.box";
+static constexpr auto DEVICE_DEFAULT_PORT = 49000;
+static constexpr auto DEVICE_DEFAULT_ENCRYPTION = false;
+static constexpr auto *DEVICE_DESCRIPTION_DOCUMENT = "/igddesc.xml";
 static constexpr auto *DOWNSTREAM_DATA_PROPERTY = "downstreamData";
 static constexpr auto *DOWNSTREAM_GRAPH = "downstreamGraph";
 static constexpr auto *GET_ADDON_INFOS_ACTION_NAME = "GetAddonInfos";
@@ -34,8 +42,23 @@ MonitorApp::MonitorApp(QObject *parent)
     m_updatePeriod(DEFAULT_UPDATE_PERIOD),
     m_upstreamData(new GraphModel)
 {
+    QCoreApplication::setOrganizationName(ORG_NAME);
+    QCoreApplication::setOrganizationDomain(ORG_DOMAIN);
+    QCoreApplication::setApplicationName(APP_NAME);
+
+    m_settings.readConfiguration();
+    if (m_settings.host().isEmpty())
+        m_settings.setHost(DEVICE_DEFAULT_HOST);
+    if (m_settings.port() == -1)
+        m_settings.setPort(DEVICE_DEFAULT_PORT);
+    if (!m_settings.useSSL())
+        m_settings.setUseSSL(DEVICE_DEFAULT_ENCRYPTION);
+
+    auto deviceDescriptionURL = m_settings.deviceURL();
+
+    deviceDescriptionURL.setPath(DEVICE_DESCRIPTION_DOCUMENT);
     connect(&m_deviceFinder, &upnp::DeviceFinder::deviceAdded, this, &MonitorApp::onDeviceAdded);
-    m_deviceFinder.findDevice(QUrl(DEVICE_DESCRIPTION_URL));
+    m_deviceFinder.findDevice(deviceDescriptionURL);
 
     auto *rootContext = m_view.rootContext();
 

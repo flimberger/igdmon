@@ -1,6 +1,8 @@
 #ifndef FRITZMON_MONITORAPP_HPP
 #define FRITZMON_MONITORAPP_HPP
 
+#include "Settings.hpp"
+
 #include "upnp/DeviceFinder.hpp"
 
 #include <QtCore/QObject>
@@ -36,6 +38,7 @@ private:
     } m_appState;
     upnp::DeviceFinder m_deviceFinder;
     GraphModel *m_downstreamData;
+    Settings m_settings;
     int m_updatePeriod;
     QTimer m_updateTimer;
     GraphModel *m_upstreamData;
